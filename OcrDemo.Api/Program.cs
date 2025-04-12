@@ -1,4 +1,4 @@
-namespace OcrDemo.API;
+namespace OcrDemo.Api;
 
 public class Program
 {
