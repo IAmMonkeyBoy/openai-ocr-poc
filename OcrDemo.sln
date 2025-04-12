@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OcrDemo.Core", "OcrDemo.Core\OcrDemo.Core.csproj", "{45679181-06BE-480C-936F-0DA6B835E296}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OcrDemo.API", "OcrDemo.API\OcrDemo.API.csproj", "{90954D55-9F90-49A9-A04A-7EE280DB7E52}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OcrDemo.Api", "OcrDemo.Api\OcrDemo.Api.csproj", "{90954D55-9F90-49A9-A04A-7EE280DB7E52}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
