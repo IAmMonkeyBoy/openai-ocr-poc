@@ -1,10 +1,12 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Schema;
 using Betalgo.Ranul.OpenAI.Interfaces;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Requests;
+using OcrDemo.Core.Responses;
 
 namespace OcrDemo.Core.Services;
 
@@ -33,7 +35,6 @@ public class OpenAiChatService : IOpenAiChatService
 
     public async Task<IdentifyDocumentResponse> IdentifyDocument(DocumentRequest request)
     {
-
         byte[] bytes = GetFileBytes(request.FileContent);
         string inferredImageType = InferImageTypeFromBytes(bytes);
         
@@ -142,12 +143,46 @@ public class OpenAiChatService : IOpenAiChatService
         throw new NotImplementedException();
     }
 
-    public Task<OcrRateConfirmationResponse> OcrRateConfirmation(OcrRequest request)
+    public async Task<OcrRateConfirmationResponse> OcrRateConfirmation(OcrRequest request)
     {
-        string prompt = GeneratePrompt(typeof(RateConfirmation));
+        byte[] bytes = GetFileBytes(request.FileContent);
+        string inferredImageType = InferImageTypeFromBytes(bytes);
+        
+        var prompt = GeneratePrompt(typeof(RateConfirmation));
 
-        throw new NotImplementedException();
+        var response = await _openAiService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+        {
+            Messages = new List<ChatMessage>
+            {
+                new ChatMessage
+                {
+                    Role = "system",
+                    Content = prompt
+                },
+                new ChatMessage()
+                {
+                    Role = "user",
+                    Contents = new List<MessageContent>()
+                        { MessageContent.ImageBinaryContent(bytes, inferredImageType) }
+                }
+
+            },
+            ResponseFormat = new ResponseFormat
+            {
+
+                JsonSchema = GenerateJsonSchema(typeof(RateConfirmation))
+            },
+            MaxTokens = 1000,
+            Temperature = 0.7F,
+            Model = "gpt-4o"
+        });
+        return new OcrRateConfirmationResponse(
+                JsonSerializer.Deserialize<RateConfirmation>(response.Choices.FirstOrDefault()?.Message.Content ?? "{}"))
+            ;
+
     }
+
+
 
     private string GeneratePrompt(Type type)
     {
@@ -159,48 +194,27 @@ public class OpenAiChatService : IOpenAiChatService
 
 
                          """;
-        string schema = GenerateJsonSchema(type);
+        string schema = GenerateJsonSchemaString(type);
 
         return prompt + schema;
     }
 
 
-    private string GenerateJsonSchema(Type type)
+    private string GenerateJsonSchemaString(Type type)
     {
-        var schema = new JsonObject
-        {
-            ["$schema"] = "http://json-schema.org/draft-07/schema#",
-            ["type"] = "object",
-            ["properties"] = new JsonObject()
-        };
-
-        var properties = type.GetProperties();
-        foreach (var property in properties)
-        {
-            var propertySchema = new JsonObject
-            {
-                ["type"] = GetJsonType(property.PropertyType)
-            };
-
-            ((JsonObject)schema["properties"])[property.Name] = propertySchema;
-        }
-
-        return JsonSerializer.Serialize(schema, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        
+        JsonSerializerOptions options = JsonSerializerOptions.Default;
+        return options.GetJsonSchemaAsNode(type).ToString();
+        
+        
+        
     }
 
-    private string GetJsonType(Type type)
+    
+    private JsonSchema GenerateJsonSchema(Type type)
     {
-        if (type == typeof(string)) return "string";
-        if (type == typeof(int) || type == typeof(long)) return "integer";
-        if (type == typeof(float) || type == typeof(double) || type == typeof(decimal)) return "number";
-        if (type == typeof(bool)) return "boolean";
-        if (type == typeof(DateTime)) return "string"; // Dates are typically represented as strings in JSON
-        if (type.IsArray || typeof(IEnumerable<>).IsAssignableFrom(type)) return "array";
-        if (type.IsClass) return "object";
 
-        return "string"; // Default to string for unknown types
+        return new JsonSchema();
     }
+
 }
