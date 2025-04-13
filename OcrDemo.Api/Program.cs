@@ -1,48 +1,90 @@
-namespace OcrDemo.Api;
+using OcrDemo.Core;
+using OcrDemo.Core.Requests;
 
-public class Program
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddAuthorization();
+
+// Add CORS services
+builder.Services.AddCors(options =>
 {
-    public static void Main(string[] args)
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        var builder = WebApplication.CreateBuilder(args);
+        policy.WithOrigins("http://localhost:5174") // Replace with your frontend's URL
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
 
-        // Add services to the container.
-        builder.Services.AddAuthorization();
+// Register services from OcrDemo.Core
+builder.Services.RegisterOcrDemoServices();
 
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-        builder.Services.AddOpenApi();
+var app = builder.Build();
 
-        var app = builder.Build();
-
-        // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-        }
-
-        app.UseHttpsRedirection();
-
-        app.UseAuthorization();
-
-        var summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
-
-        app.MapGet("/weatherforecast", (HttpContext httpContext) =>
-            {
-                var forecast = Enumerable.Range(1, 5).Select(index =>
-                        new WeatherForecast
-                        {
-                            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                            TemperatureC = Random.Shared.Next(-20, 55),
-                            Summary = summaries[Random.Shared.Next(summaries.Length)]
-                        })
-                    .ToArray();
-                return forecast;
-            })
-            .WithName("GetWeatherForecast");
-
-        app.Run();
-    }
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
 }
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+// Use CORS
+app.UseCors("AllowFrontend");
+
+// Configure JSON serialization to use Pascal case globally
+var jsonOptions = new System.Text.Json.JsonSerializerOptions
+{
+    PropertyNamingPolicy = null // Use Pascal case
+};
+
+// Endpoint 1: Identify Document Type
+app.MapPost("/identify-document", async (HttpRequest request, IOpenAiChatService openAiChatService) =>
+{
+    if (!request.HasFormContentType || request.Form.Files.Count == 0)
+    {
+        return Results.BadRequest("No file uploaded.");
+    }
+
+    var file = request.Form.Files[0];
+    var identifyRequest = new DocumentRequest
+    {
+        FileName = file.FileName,
+        FileContent = file.OpenReadStream()
+    };
+
+    var response = await openAiChatService.IdentifyDocument(identifyRequest);
+    return Results.Json(response, jsonOptions); // Apply Pascal case serialization
+})
+.WithName("IdentifyDocument");
+
+// Endpoint 2: OCR Document
+app.MapPost("/ocr-document/{documentType}", async (HttpRequest request, string documentType, IOpenAiChatService openAiChatService) =>
+{
+    if (string.IsNullOrWhiteSpace(documentType))
+    {
+        return Results.BadRequest("Document type is required.");
+    }
+
+    if (!request.HasFormContentType || request.Form.Files.Count == 0)
+    {
+        return Results.BadRequest("No file uploaded.");
+    }
+
+    var file = request.Form.Files[0];
+    var ocrRequest = new OcrRequest
+    {
+        DocumentType = documentType,
+        FileName = file.FileName,
+        FileContent = file.OpenReadStream()
+    };
+
+    var response = await openAiChatService.OcrRateConfirmation(ocrRequest);
+    return Results.Json(response, jsonOptions); // Apply Pascal case serialization
+})
+.WithName("OcrDocument");
+
+app.Run();
