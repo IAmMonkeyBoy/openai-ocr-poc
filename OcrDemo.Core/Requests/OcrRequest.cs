@@ -2,5 +2,5 @@
 
 public class OcrRequest : DocumentRequest
 {
-    public string DocumentType { get; set; }
+    public required string DocumentType { get; init; }
 }
