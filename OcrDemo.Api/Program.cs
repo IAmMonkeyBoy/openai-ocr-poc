@@ -1,5 +1,6 @@
 using OcrDemo.Core;
 using OcrDemo.Core.Requests;
+using OcrDemo.Core.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +19,9 @@ builder.Services.AddCors(options =>
 });
 
 // Register services from OcrDemo.Core
-builder.Services.RegisterOcrDemoServices();
+
+var openAiApiKey = builder.Configuration["OpenAIServiceOptions:ApiKey"];
+builder.Services.RegisterOcrDemoServices(openAiApiKey);
 
 var app = builder.Build();
 
