@@ -7,8 +7,15 @@ public class EnumObjectConverter<T> : JsonConverter<T> where T : struct, Enum
 {
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        if (reader.TokenType == JsonTokenType.StartObject)
+        
+        if (reader.TokenType == JsonTokenType.String)
         {
+            if (Enum.TryParse<T>(reader.GetString(), out var result))
+            {
+                return result;
+            }
+        }
+
             // Read the object
             using (JsonDocument document = JsonDocument.ParseValue(ref reader))
             {
@@ -24,14 +31,8 @@ public class EnumObjectConverter<T> : JsonConverter<T> where T : struct, Enum
                     }
                 }
             }
-        }
-        else if (reader.TokenType == JsonTokenType.String)
-        {
-            if (Enum.TryParse<T>(reader.GetString(), out var result))
-            {
-                return result;
-            }
-        }
+        
+        
         throw new JsonException($"Unable to deserialize {typeof(T).Name} from JSON.");
     }
 

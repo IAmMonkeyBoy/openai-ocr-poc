@@ -6,6 +6,7 @@ public class RateConfirmation
 {
     
     public string? ConfirmationNumber { get; set; }
+
     public DateTime DateIssued { get; set; }
 
     public PartyInfo? Broker { get; set; }
@@ -49,7 +50,7 @@ public class Stop
     
     public DateTime? ScheduledDateTime { get; set; }
 
-    public AppointmentType? Appointment { get; set; }
+    public AppointmentType? AppointmentType { get; set; }
 }
 
 public enum StopType
@@ -150,5 +151,5 @@ public class SignatureInfo
 {
     public string? Name { get; set; }
     public string? Title { get; set; }
-    public DateTime? SignedDate { get; set; }
+   public DateTime? SignedDate { get; set; }
 }
