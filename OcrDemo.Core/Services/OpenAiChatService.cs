@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using Betalgo.Ranul.OpenAI.Interfaces;
+using Betalgo.Ranul.OpenAI.ObjectModels;
 using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+using Betalgo.Ranul.OpenAI.ObjectModels.SharedModels;
 using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Requests;
 using OcrDemo.Core.Responses;
@@ -60,7 +62,7 @@ public class OpenAiChatService : IOpenAiChatService
                 {
                     Role = "user",
                     Content = $"""
-                               What is the document type?
+                               What is the document type?  Respond with only the document type name.
                                """
                 }
             },
@@ -150,7 +152,7 @@ public class OpenAiChatService : IOpenAiChatService
         
         var prompt = GeneratePrompt(typeof(RateConfirmation));
 
-        var response = await _openAiService.ChatCompletion.CreateCompletion(new ChatCompletionCreateRequest
+        var chatCompletionCreateRequest = new ChatCompletionCreateRequest
         {
             Messages = new List<ChatMessage>
             {
@@ -169,16 +171,37 @@ public class OpenAiChatService : IOpenAiChatService
             },
             ResponseFormat = new ResponseFormat
             {
-
+                Type = StaticValues.CompletionStatics.ResponseFormat.JsonSchema,
                 JsonSchema = GenerateJsonSchema(typeof(RateConfirmation))
             },
             MaxTokens = 1000,
             Temperature = 0.7F,
             Model = "gpt-4o"
-        });
-        return new OcrRateConfirmationResponse(
-                JsonSerializer.Deserialize<RateConfirmation>(response.Choices.FirstOrDefault()?.Message.Content ?? "{}"))
-            ;
+        };
+        var response = await _openAiService.ChatCompletion.CreateCompletion(chatCompletionCreateRequest);
+        
+        var options = new JsonSerializerOptions
+        {
+            Converters =
+            {
+                new EnumObjectConverter<StopType>(),
+                new EnumObjectConverter<AppointmentType>(),
+                new EnumObjectConverter<LoadType>(),
+                new DateTimeIso8601Converter()
+            }
+        };
+        try
+        {
+            return new OcrRateConfirmationResponse(
+                    JsonSerializer.Deserialize<RateConfirmation>(response.Choices.FirstOrDefault()?.Message.Content ?? "{}", options))
+                ;
+        }
+        catch (Exception e)
+        {
+           
+            throw;
+        }
+
 
     }
 
@@ -194,9 +217,9 @@ public class OpenAiChatService : IOpenAiChatService
 
 
                          """;
-        string schema = GenerateJsonSchemaString(type);
+       // string schema = GenerateJsonSchemaString(type);
 
-        return prompt + schema;
+        return prompt;
     }
 
 
@@ -205,16 +228,142 @@ public class OpenAiChatService : IOpenAiChatService
         
         JsonSerializerOptions options = JsonSerializerOptions.Default;
         return options.GetJsonSchemaAsNode(type).ToString();
-        
-        
-        
+
+
+        //var node = options.GetJsonSchemaAsNode();
+return String.Empty;
+
     }
 
     
     private JsonSchema GenerateJsonSchema(Type type)
     {
+        
+        JsonSerializerOptions options = JsonSerializerOptions.Default;
+        var node = options.GetJsonSchemaAsNode(type);
 
-        return new JsonSchema();
+        var nodeName = node.Parent != null ? node.GetPropertyName() : type.Name;
+        
+        var returnValue = new JsonSchema()
+        {
+            
+            Name = nodeName,
+            Schema = GetPropertyDefinitionFromType(type)
+        };
+
+return returnValue;
+
     }
 
+    private PropertyDefinition? GetPropertyDefinitionFromType(Type type)
+    {
+        
+        if (type.IsPrimitive)
+        {
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short))
+            {
+                return PropertyDefinition.DefineInteger();
+            }
+            if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
+            {
+                return PropertyDefinition.DefineNumber();
+            }
+            if (type == typeof(bool))
+            {
+                return PropertyDefinition.DefineBoolean();
+            }
+        }
+
+        if (type.IsEnum)
+        {
+            return PropertyDefinition.DefineEnum(type.GetEnumNames().ToList());
+        }
+        
+
+        if (type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)))
+        {
+            return PropertyDefinition.DefineArray(GetPropertyDefinitionFromType(type.IsArray ? type.GetElementType()! : type.GetGenericArguments()[0]));
+        }
+        
+        if (type == typeof(string))
+        {
+            return PropertyDefinition.DefineString();
+        }
+
+        if (type == typeof(DateTime))
+        {
+            return PropertyDefinition.DefineString("ISO 8601 date format");
+        }
+        var returnValue = new PropertyDefinition();
+        returnValue.Type = "object";
+        returnValue.Properties = new Dictionary<string, PropertyDefinition>();
+        foreach (var prop in type.GetProperties())
+        {
+            var propertyDefinition = GetPropertyDefinitionFromType(prop.PropertyType);
+            if (propertyDefinition != null)
+            {
+                returnValue.Properties.Add(prop.Name, propertyDefinition);
+            }
+        }
+        return returnValue;
+    }
+    
+    private PropertyDefinition? GetPropertyDefinitionFromNode(JsonNode? node)
+    {
+        switch (node?.GetValueKind())
+        {
+            case JsonValueKind.Object:
+                var properties = new Dictionary<string,PropertyDefinition>();
+                foreach (var property in node.AsObject())
+                {
+                    var propertyDefinition = GetPropertyDefinitionFromNode(property.Value);
+                    if (propertyDefinition != null)
+                    {
+                        properties.Add(property.Key, new PropertyDefinition
+                        {
+                            
+                            Type = propertyDefinition.Type,
+                            //Required = true
+                        });
+                    }
+                }
+                return new PropertyDefinition
+                {
+                    Type = "object",
+                    
+                    Properties = properties
+                };
+            case JsonValueKind.Array:
+                var arrayItems = node.AsArray().Select(item => GetPropertyDefinitionFromNode(item)).ToList();
+                return new PropertyDefinition
+                {
+                    Type = "array",
+                    Items = arrayItems.FirstOrDefault()
+                };
+            case JsonValueKind.String:
+                return new PropertyDefinition
+                {
+                    Type = "string"
+                };
+            case JsonValueKind.Number:
+                return new PropertyDefinition
+                {
+                    Type = "number"
+                };
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                return new PropertyDefinition
+                {
+                    Type = "boolean"
+                };
+            case JsonValueKind.Null:
+                return new PropertyDefinition
+                {
+                    Type = "null"
+                };
+            default:
+                return null;
+        }
+    }
 }
+
