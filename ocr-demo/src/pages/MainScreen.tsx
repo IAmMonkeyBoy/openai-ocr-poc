@@ -59,6 +59,28 @@ const MainScreen: React.FC = () => {
         multiple: false,
     });
 
+
+    // Assuming you have a file input, a document type selector, and an OCR button in your UI
+
+
+
+    const handleOcrDocument = async () => {
+ 
+
+
+        if (!documentType) {
+            console.error("No document type selected.");
+            return;
+        }
+
+        try {
+            const response = await DocumentService.ocrDocument(uploadedFile, documentType);
+            console.log("OCR Response:", response);
+        } catch (error) {
+            console.error("Failed to OCR document:", error);
+        }
+    };
+    
     return (
         <Box
             sx={{
@@ -175,6 +197,7 @@ const MainScreen: React.FC = () => {
                         variant="contained"
                         color="secondary"
                         disabled={!documentType}
+                        onClick = {handleOcrDocument}
                     >
                         OCR Document
                     </Button>
