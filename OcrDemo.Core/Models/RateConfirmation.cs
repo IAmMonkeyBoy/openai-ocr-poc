@@ -1,11 +1,11 @@
-﻿namespace OcrDemo.Core;
+﻿namespace OcrDemo.Core.Models;
 
 public class RateConfirmation
 {
     public string? ConfirmationNumber { get; set; }
     public DateTime DateIssued { get; set; }
-    public PartyInfo? Broker { get; set; }
-    public PartyInfo? Carrier { get; set; }
+    public Party? Broker { get; set; }
+    public Party? Carrier { get; set; }
     public string? LoadNumber { get; set; }
     public List<Stop>? Stops { get; set; } = new();
     public FreightDetails? Freight { get; set; }
@@ -16,16 +16,7 @@ public class RateConfirmation
     public SignatureSection? Signatures { get; set; }
 }
 
-public class PartyInfo
-{
-    public string? Name { get; set; }
-    public string? ContactPerson { get; set; }
-    public string? Phone { get; set; }
-    public string? Email { get; set; }
-    public string? Address { get; set; }
-    public string? MCNumber { get; set; }
-    public string? DOTNumber { get; set; }
-}
+
 
 public class Stop
 {

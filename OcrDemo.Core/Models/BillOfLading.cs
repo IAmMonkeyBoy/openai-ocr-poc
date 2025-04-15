@@ -34,26 +34,6 @@ public class BillOfLading
     public DateTime? SignedDate { get; set; }
 }
 
-public class Party
-{
-    public string? Name { get; set; }
-    public Address? Address { get; set; }
-    public string? ContactName { get; set; }
-    public string? PhoneNumber { get; set; }
-    public string? Email { get; set; }
-    public PartyRole? Role { get; set; }
-}
-
-public class Address
-{
-    public string? Street1 { get; set; }
-    public string? Street2 { get; set; }
-    public string? City { get; set; }
-    public string? StateOrProvince { get; set; }
-    public string? PostalCode { get; set; }
-    public string? Country { get; set; }
-}
-
 public class BillOfLadingItem
 {
     public string? Description { get; set; }
@@ -107,11 +87,4 @@ public enum FreightTerms
     ThirdParty
 }
 
-public enum PartyRole
-{
-    Shipper,
-    Carrier,
-    Consignee,
-    NotifyParty,
-    Other
-}
+

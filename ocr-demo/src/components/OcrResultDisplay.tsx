@@ -10,7 +10,7 @@ const camelCaseToTitleCase = (str: string): string => {
         .replace(/^./, (char) => char.toUpperCase()); // Capitalize the first letter
 };
 
-const renderJson = (data: any, level: number = 0): JSX.Element => {
+const renderJson = (data: object, level: number = 0): JSX.Element => {
     if (typeof data !== 'object' || data === null) {
         // Skip rendering for null values
         if (data === null) return <></>;
