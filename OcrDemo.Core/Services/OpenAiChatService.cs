@@ -1,17 +1,15 @@
-﻿using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json;
 using System.Text.Json.Schema;
-// using Betalgo.Ranul.OpenAI.Interfaces;
-// using Betalgo.Ranul.OpenAI.ObjectModels;
-// using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
-// using Betalgo.Ranul.OpenAI.ObjectModels.SharedModels;
 using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Models;
 using OcrDemo.Core.Requests;
 using OcrDemo.Core.Responses;
 using OpenAI;
 using OpenAI.Chat;
+// using Betalgo.Ranul.OpenAI.Interfaces;
+// using Betalgo.Ranul.OpenAI.ObjectModels;
+// using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
+// using Betalgo.Ranul.OpenAI.ObjectModels.SharedModels;
 
 namespace OcrDemo.Core.Services;
 
@@ -31,7 +29,7 @@ public class OpenAiChatService : IOpenAiChatService
 
     public OpenAiChatService(
         ILogger<OpenAiChatService> logger,
-        OpenAI.OpenAIClient openAiClient
+        OpenAIClient openAiClient
     )
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -40,8 +38,8 @@ public class OpenAiChatService : IOpenAiChatService
 
     public async Task<IdentifyDocumentResponse> IdentifyDocument(DocumentRequest request)
     {
-        byte[] bytes = GetFileBytes(request.FileContent);
-        string inferredImageType = InferImageTypeFromBytes(bytes);
+        var bytes = GetFileBytes(request.FileContent);
+        var inferredImageType = InferImageTypeFromBytes(bytes);
 
         var response = await _openAiClient.GetChatClient("gpt-4o").CompleteChatAsync(
             new SystemChatMessage("""
@@ -59,7 +57,27 @@ public class OpenAiChatService : IOpenAiChatService
         };
     }
 
-    private string InferImageTypeFromBytes(byte[] bytes)
+    public async Task<OcrRateConfirmationResponse> OcrRateConfirmation(OcrRequest request)
+    {
+        return new OcrRateConfirmationResponse(await OcrDocument<RateConfirmation>(request));
+    }
+
+    public async Task<OcrInvoiceResponse> OcrInvoice(OcrRequest request)
+    {
+        return new OcrInvoiceResponse(await OcrDocument<Invoice>(request));
+    }
+
+    public async Task<OcrBillOfLadingResponse> OcrBillOfLading(OcrRequest request)
+    {
+        return new OcrBillOfLadingResponse(await OcrDocument<BillOfLading>(request));
+    }
+
+    public async Task<OcrFuelReceiptResponse> OcrFuelReceipt(OcrRequest request)
+    {
+        return new OcrFuelReceiptResponse(await OcrDocument<FuelReceipt>(request));
+    }
+
+    private static string InferImageTypeFromBytes(byte[] bytes)
     {
         if (bytes.Length < 4)
             throw new ArgumentException("Byte array is too small to determine the image type.");
@@ -84,25 +102,24 @@ public class OpenAiChatService : IOpenAiChatService
     }
 
 
-    private byte[] GetFileBytes(Stream requestFileContent)
+    private static byte[] GetFileBytes(Stream requestFileContent)
     {
-        using MemoryStream memoryStream = new MemoryStream();
+        using var memoryStream = new MemoryStream();
         requestFileContent.CopyTo(memoryStream);
         return memoryStream.ToArray();
     }
 
 
-
-    private string TypeNameToRealName<T>()
+    private static string TypeNameToRealName<T>()
     {
-       var typeName = typeof(T).Name;
-       return string.Concat(typeName.Select((x, i) => i > 0 && char.IsUpper(x) ? " " + x : x.ToString())).ToLower();
+        var typeName = typeof(T).Name;
+        return string.Concat(typeName.Select((x, i) => i > 0 && char.IsUpper(x) ? " " + x : x.ToString())).ToLower();
     }
-    
-    public async Task<T?> OcrDocument<T>(OcrRequest request)
+
+    protected async Task<T?> OcrDocument<T>(OcrRequest request)
     {
-        byte[] bytes = GetFileBytes(request.FileContent);
-        string inferredImageType = InferImageTypeFromBytes(bytes);
+        var bytes = GetFileBytes(request.FileContent);
+        var inferredImageType = InferImageTypeFromBytes(bytes);
         var messages = new List<ChatMessage>
         {
             new SystemChatMessage(GeneratePrompt(typeof(T))),
@@ -114,62 +131,39 @@ public class OpenAiChatService : IOpenAiChatService
                                  Section 5.6 format.
                                  """)
         };
-        
+
         var responseSchema = GenerateJsonSchemaString(typeof(T));
-        var options = new ChatCompletionOptions()
+        var options = new ChatCompletionOptions
         {
-            ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(nameof(T), BinaryData.FromString(responseSchema)),
+            ResponseFormat =
+                ChatResponseFormat.CreateJsonSchemaFormat(nameof(T), BinaryData.FromString(responseSchema)),
             Temperature = 0.7F,
-            MaxOutputTokenCount = 1000,
+            MaxOutputTokenCount = 1000
         };
-        
+
         var result = await _openAiClient.GetChatClient("gpt-4o").CompleteChatAsync(messages, options);
         var outputAsText = result.Value.Content.FirstOrDefault()?.Text ?? string.Empty;
-       return          JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions { });
-       ;
-        
-    }
-
-    public async Task<OcrRateConfirmationResponse> OcrRateConfirmation(OcrRequest request)
-    {
-        return new OcrRateConfirmationResponse(await OcrDocument<RateConfirmation>(request));
-    }
-
-    public async Task<OcrInvoiceResponse> OcrInvoice(OcrRequest request)
-    {
-        return new OcrInvoiceResponse(await OcrDocument<Invoice>(request));
-    }
-
-    public async Task<OcrBillOfLadingResponse> OcrBillOfLading(OcrRequest request)
-    {
-        return new OcrBillOfLadingResponse(await OcrDocument<BillOfLading>(request));
-    }
-
-    public async Task<OcrFuelReceiptResponse> OcrFuelReceipt(OcrRequest request)
-    {
-        return new OcrFuelReceiptResponse(await OcrDocument<FuelReceipt>(request));
+        return JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions());
     }
 
 
-    private string GeneratePrompt(Type type)
+    private static string GeneratePrompt(Type type)
     {
-        string documentTypeName = "";
-        string prompt = $"""
-                         You are an AI assistant of performing OCR on documents, and then transcribing the data into a 
-                         structured format.  Please analyze the following {documentTypeName} document and extract the 
-                         relevant information into the structured format below.
-                         """;
+        var documentTypeName = "";
+        var prompt = $"""
+                      You are an AI assistant of performing OCR on documents, and then transcribing the data into a 
+                      structured format.  Please analyze the following {documentTypeName} document and extract the 
+                      relevant information into the structured format below.
+                      """;
         return prompt;
     }
 
 
-    private string GenerateJsonSchemaString(Type type)
+    private static string GenerateJsonSchemaString(Type type)
     {
-        JsonSerializerOptions options = JsonSerializerOptions.Default;
-
-        var schemaNode = options.GetJsonSchemaAsNode(type,
-            new JsonSchemaExporterOptions() { TreatNullObliviousAsNonNullable = true });
-        var s = schemaNode.ToString();
+        var options = JsonSerializerOptions.Default;
+        var jsonSchemaExporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
+        var schemaNode = options.GetJsonSchemaAsNode(type, jsonSchemaExporterOptions);
         return schemaNode.ToString();
     }
 }

@@ -6,7 +6,6 @@ namespace OcrDemo.Core;
 
 public static class ComponentRegistration
 {
-    
     public static IServiceCollection RegisterOcrDemoServices(this IServiceCollection services, string? openAiApiKey)
     {
         services.AddSingleton<OpenAIClient>(x => new OpenAIClient(openAiApiKey));

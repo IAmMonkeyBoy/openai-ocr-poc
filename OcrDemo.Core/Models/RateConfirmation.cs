@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace OcrDemo.Core;
+﻿namespace OcrDemo.Core;
 
 public class RateConfirmation
 {
