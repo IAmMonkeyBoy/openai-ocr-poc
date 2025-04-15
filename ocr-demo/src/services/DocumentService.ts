@@ -5,9 +5,7 @@ export interface IdentifyDocumentResponse {
 }
 
 export interface OcrDocumentResponse {
-    FileName: string;
-    DocumentType: string;
-    OcrText: string;
+ document: string;
 }
 
 const API_BASE_URL = "http://localhost:5194/";
@@ -26,7 +24,7 @@ class DocumentService {
             throw new Error("Failed to identify document.");
         }
 
-        return response.json() as Promise<IdentifyDocumentResponse>;
+        return await response.json() as Promise<IdentifyDocumentResponse>;
     }
 
     static async ocrDocument(file: File, documentType: string): Promise<OcrDocumentResponse> {
@@ -42,7 +40,7 @@ class DocumentService {
             throw new Error("Failed to OCR document.");
         }
 
-        return response.json() as Promise<OcrDocumentResponse>;
+        return await response.json() as Promise<OcrDocumentResponse>;
     }
 }
 
