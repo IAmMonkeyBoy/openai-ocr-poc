@@ -7,6 +7,7 @@ using System.Text.Json.Schema;
 // using Betalgo.Ranul.OpenAI.ObjectModels.RequestModels;
 // using Betalgo.Ranul.OpenAI.ObjectModels.SharedModels;
 using Microsoft.Extensions.Logging;
+using OcrDemo.Core.Models;
 using OcrDemo.Core.Requests;
 using OcrDemo.Core.Responses;
 using OpenAI;
@@ -26,18 +27,14 @@ public interface IOpenAiChatService
 public class OpenAiChatService : IOpenAiChatService
 {
     private readonly ILogger<OpenAiChatService> _logger;
-
-//    private readonly IOpenAIService _openAiService;
     private readonly OpenAIClient _openAiClient;
 
     public OpenAiChatService(
         ILogger<OpenAiChatService> logger,
-//        IOpenAIService openAiService,
         OpenAI.OpenAIClient openAiClient
     )
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-//        _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
         _openAiClient = openAiClient ?? throw new ArgumentNullException(nameof(openAiClient));
     }
 
@@ -94,45 +91,12 @@ public class OpenAiChatService : IOpenAiChatService
         return memoryStream.ToArray();
     }
 
-    private static async Task<StringBuilder> Base64EncodedFileContents(Stream stream)
-    {
-        StringBuilder base64EncodedFileContents = new StringBuilder();
-
-
-        while (stream.CanRead)
-        {
-            byte[] buffer = new byte[4096];
-            int bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
-            if (bytesRead == 0)
-                break;
-            base64EncodedFileContents.Append(Convert.ToBase64String(buffer, 0, bytesRead));
-        }
-
-        return base64EncodedFileContents;
-    }
-
-    public Task<OcrInvoiceResponse> OcrInvoice(OcrRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OcrBillOfLadingResponse> OcrBillOfLading(OcrRequest request)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<OcrFuelReceiptResponse> OcrFuelReceipt(OcrRequest request)
-    {
-        throw new NotImplementedException();
-    }
 
 
     private string TypeNameToRealName<T>()
     {
        var typeName = typeof(T).Name;
        return string.Concat(typeName.Select((x, i) => i > 0 && char.IsUpper(x) ? " " + x : x.ToString())).ToLower();
-       
-        
     }
     
     public async Task<T?> OcrDocument<T>(OcrRequest request)
@@ -168,28 +132,22 @@ public class OpenAiChatService : IOpenAiChatService
 
     public async Task<OcrRateConfirmationResponse> OcrRateConfirmation(OcrRequest request)
     {
-        // byte[] bytes = GetFileBytes(request.FileContent);
-        // string inferredImageType = InferImageTypeFromBytes(bytes);
-        // var messages = new List<ChatMessage>
-        // {
-        //     new SystemChatMessage(GeneratePrompt(typeof(RateConfirmation))),
-        //     new UserChatMessage(ChatMessageContentPart.CreateImagePart(new BinaryData(bytes), inferredImageType)),
-        //     new UserChatMessage("Please generate a rate confirmation from the supplied image in the specified format.")
-        // };
-        //
-        // var responseSchema = GenerateJsonSchemaString(typeof(RateConfirmation));
-        // var options = new ChatCompletionOptions()
-        // {
-        //     ResponseFormat = ChatResponseFormat.CreateJsonSchemaFormat(nameof(RateConfirmation), BinaryData.FromString(responseSchema)),
-        //     Temperature = 0.7F,
-        //     MaxOutputTokenCount = 1000,
-        // };
-        //
-        // var result = await _openAiClient.GetChatClient("gpt-4o").CompleteChatAsync(messages, options);
-        // var outputAsText = result.Value.Content.FirstOrDefault()?.Text ?? string.Empty;
-        
-
         return new OcrRateConfirmationResponse(await OcrDocument<RateConfirmation>(request));
+    }
+
+    public async Task<OcrInvoiceResponse> OcrInvoice(OcrRequest request)
+    {
+        return new OcrInvoiceResponse(await OcrDocument<Invoice>(request));
+    }
+
+    public async Task<OcrBillOfLadingResponse> OcrBillOfLading(OcrRequest request)
+    {
+        return new OcrBillOfLadingResponse(await OcrDocument<BillOfLading>(request));
+    }
+
+    public async Task<OcrFuelReceiptResponse> OcrFuelReceipt(OcrRequest request)
+    {
+        return new OcrFuelReceiptResponse(await OcrDocument<FuelReceipt>(request));
     }
 
 
@@ -200,11 +158,7 @@ public class OpenAiChatService : IOpenAiChatService
                          You are an AI assistant of performing OCR on documents, and then transcribing the data into a 
                          structured format.  Please analyze the following {documentTypeName} document and extract the 
                          relevant information into the structured format below.
-
-
                          """;
-        // string schema = GenerateJsonSchemaString(type);
-
         return prompt;
     }
 
@@ -219,136 +173,3 @@ public class OpenAiChatService : IOpenAiChatService
         return schemaNode.ToString();
     }
 }
-
-/*
-private JsonSchema GenerateJsonSchema(Type type)
-{
-
-    JsonSerializerOptions options = JsonSerializerOptions.Default;
-    var node = options.GetJsonSchemaAsNode(type);
-
-    var nodeName = node.Parent != null ? node.GetPropertyName() : type.Name;
-
-    var returnValue = new JsonSchema()
-    {
-
-        Name = nodeName,
-        Schema = GetPropertyDefinitionFromType(type)
-    };
-
-return returnValue;
-
-}
-
-private PropertyDefinition? GetPropertyDefinitionFromType(Type type)
-{
-
-    if (type.IsPrimitive)
-    {
-        if (type == typeof(int) || type == typeof(long) || type == typeof(short))
-        {
-            return PropertyDefinition.DefineInteger();
-        }
-        if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
-        {
-            return PropertyDefinition.DefineNumber();
-        }
-        if (type == typeof(bool))
-        {
-            return PropertyDefinition.DefineBoolean();
-        }
-    }
-
-    if (type.IsEnum)
-    {
-        return PropertyDefinition.DefineEnum(type.GetEnumNames().ToList());
-    }
-
-
-    if (type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)))
-    {
-        return PropertyDefinition.DefineArray(GetPropertyDefinitionFromType(type.IsArray ? type.GetElementType()! : type.GetGenericArguments()[0]));
-    }
-
-    if (type == typeof(string))
-    {
-        return PropertyDefinition.DefineString();
-    }
-
-    if (type == typeof(DateTime))
-    {
-        return PropertyDefinition.DefineString("ISO 8601 date format");
-    }
-    var returnValue = new PropertyDefinition();
-    returnValue.Type = "object";
-    returnValue.Properties = new Dictionary<string, PropertyDefinition>();
-    foreach (var prop in type.GetProperties())
-    {
-        var propertyDefinition = GetPropertyDefinitionFromType(prop.PropertyType);
-        if (propertyDefinition != null)
-        {
-            returnValue.Properties.Add(prop.Name, propertyDefinition);
-        }
-    }
-    return returnValue;
-}
-
-private PropertyDefinition? GetPropertyDefinitionFromNode(JsonNode? node)
-{
-    switch (node?.GetValueKind())
-    {
-        case JsonValueKind.Object:
-            var properties = new Dictionary<string,PropertyDefinition>();
-            foreach (var property in node.AsObject())
-            {
-                var propertyDefinition = GetPropertyDefinitionFromNode(property.Value);
-                if (propertyDefinition != null)
-                {
-                    properties.Add(property.Key, new PropertyDefinition
-                    {
-
-                        Type = propertyDefinition.Type,
-                        //Required = true
-                    });
-                }
-            }
-            return new PropertyDefinition
-            {
-                Type = "object",
-
-                Properties = properties
-            };
-        case JsonValueKind.Array:
-            var arrayItems = node.AsArray().Select(item => GetPropertyDefinitionFromNode(item)).ToList();
-            return new PropertyDefinition
-            {
-                Type = "array",
-                Items = arrayItems.FirstOrDefault()
-            };
-        case JsonValueKind.String:
-            return new PropertyDefinition
-            {
-                Type = "string"
-            };
-        case JsonValueKind.Number:
-            return new PropertyDefinition
-            {
-                Type = "number"
-            };
-        case JsonValueKind.True:
-        case JsonValueKind.False:
-            return new PropertyDefinition
-            {
-                Type = "boolean"
-            };
-        case JsonValueKind.Null:
-            return new PropertyDefinition
-            {
-                Type = "null"
-            };
-        default:
-            return null;
-    }
-}
-}
-*/
