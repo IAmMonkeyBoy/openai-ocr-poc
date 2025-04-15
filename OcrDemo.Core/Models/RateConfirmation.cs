@@ -1,29 +1,18 @@
-﻿using System.Text.Json.Serialization;
-
-namespace OcrDemo.Core;
+﻿namespace OcrDemo.Core;
 
 public class RateConfirmation
 {
-    
     public string? ConfirmationNumber { get; set; }
     public DateTime DateIssued { get; set; }
-
     public PartyInfo? Broker { get; set; }
     public PartyInfo? Carrier { get; set; }
-
     public string? LoadNumber { get; set; }
-
     public List<Stop>? Stops { get; set; } = new();
     public FreightDetails? Freight { get; set; }
-
     public FinancialTerms? FinancialTerms { get; set; }
-
     public EquipmentInfo? Equipment { get; set; }
-
     public ComplianceSection? Compliance { get; set; }
-
     public List<InstructionNote>? Instructions { get; set; }
-
     public SignatureSection? Signatures { get; set; }
 }
 
@@ -40,21 +29,16 @@ public class PartyInfo
 
 public class Stop
 {
-
-
-   public StopType? StopType { get; set; } // Pickup or Delivery
+    public StopType? StopType { get; set; } // Pickup or Delivery
     public string? LocationName { get; set; }
     public string? Address { get; set; }
     public string? Contact { get; set; }
-    
     public DateTime? ScheduledDateTime { get; set; }
-
-    public AppointmentType? Appointment { get; set; }
+    public AppointmentType? AppointmentType { get; set; }
 }
 
 public enum StopType
 {
-    
     Pickup,
     Delivery,
     Intermediate
