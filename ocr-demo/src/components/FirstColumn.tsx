@@ -1,12 +1,11 @@
 ﻿import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 
 interface FirstColumnProps {
     imageSrc: string | null;
-    base64Text: string | null;
 }
 
-const FirstColumn: React.FC<FirstColumnProps> = ({ imageSrc, base64Text }) => {
+const FirstColumn: React.FC<FirstColumnProps> = ({ imageSrc }) => {
     return (
         <Box
 sx={{
@@ -49,22 +48,7 @@ height: '516px',
                 )}
             </Box>
 
-            {/* Base64 text box */}
-            <Box
-                sx={{
-                    flexShrink: 1, // Prevent the text box from growing excessively
-                    width: '100%',
-                    maxHeight: '50%',
-                    overflow: 'auto',
-                    border: '1px solid #ccc',
-                    borderRadius: '8px',
-                    backgroundColor: '#fff',
-                    padding: '8px',
-                    wordBreak: 'break-all',
-                }}
-            >
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{base64Text}</Typography>
-            </Box>
+
         </Box>
     );
 };
