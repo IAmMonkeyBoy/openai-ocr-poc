@@ -44,8 +44,9 @@ var jsonOptions = new System.Text.Json.JsonSerializerOptions
   PropertyNamingPolicy = null // Use Pascal case
 };
 
+
 // Endpoint 1: Identify Document Type
-app.MapPost("/identify-document", async (HttpRequest request, IOpenAiChatService openAiChatService) =>
+app.MapPost("/identify-document", async (HttpRequest request, IDocumentService documentService) =>
   {
     if (!request.HasFormContentType || request.Form.Files.Count == 0)
     {
@@ -55,14 +56,14 @@ app.MapPost("/identify-document", async (HttpRequest request, IOpenAiChatService
     var file = request.Form.Files[0];
     var identifyRequest = new DocumentRequest { FileName = file.FileName, FileContent = file.OpenReadStream() };
 
-    var response = await openAiChatService.IdentifyDocument(identifyRequest);
+    var response = await documentService.IdentifyDocument(identifyRequest);
     return Results.Json(response, jsonOptions); // Apply Pascal case serialization
   })
   .WithName("IdentifyDocument");
 
 // Endpoint 2: OCR Document
 app.MapPost("/ocr-document/{documentType}",
-    async (HttpRequest request, string documentType, IOpenAiChatService openAiChatService) =>
+    async (HttpRequest request, string documentType, IStructuredDocumentService openAiChatService) =>
     {
       if (string.IsNullOrWhiteSpace(documentType))
       {
