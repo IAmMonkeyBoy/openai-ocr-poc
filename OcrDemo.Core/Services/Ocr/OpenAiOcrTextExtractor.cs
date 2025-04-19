@@ -4,7 +4,7 @@ using OcrDemo.Core.Utils;
 using OpenAI;
 using OpenAI.Chat;
 
-namespace OcrDemo.Core.Services;
+namespace OcrDemo.Core.Services.Ocr;
 
 public class OpenAiOcrService : IOcrService
 {

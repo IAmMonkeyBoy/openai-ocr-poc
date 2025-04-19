@@ -1,19 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
-using OcrDemo.Core.Requests;
 using OcrDemo.Core.Responses;
 using OcrDemo.Core.Utils;
 using OpenAI;
 using OpenAI.Chat;
 
+namespace OcrDemo.Core.Services.Document.Identification;
 
-namespace OcrDemo.Core.Services;
-
-public interface IDocumentService
-{
-    Task<IdentifyDocumentResponse> IdentifyDocument(DocumentRequest request);
-}
-
-public class OpenAiDocumentService : IDocumentService
+public class OpenAiDocumentService : IDocumentIdentificationService
 {
   private readonly ILogger<OpenAiDocumentService> _logger;
   private readonly OpenAIClient _openAiClient;
@@ -47,13 +40,4 @@ public class OpenAiDocumentService : IDocumentService
       DocumentType = response?.Value.Content.FirstOrDefault()?.Text ?? "Unknown"
     };
   }
-}
-
-public interface IStructuredDocumentService
-{
-    Task<OcrInvoiceResponse> OcrInvoice(OcrRequest request);
-    Task<OcrBillOfLadingResponse> OcrBillOfLading(OcrRequest request);
-    Task<OcrFuelReceiptResponse> OcrFuelReceipt(OcrRequest request);
-    Task<OcrRateConfirmationResponse> OcrRateConfirmation(OcrRequest request);
-    Task<T?> OcrDocument<T>(OcrRequest request);
 }

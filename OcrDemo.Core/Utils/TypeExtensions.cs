@@ -14,7 +14,7 @@ public static class TypeExtensions
 
   public static string ToJsonSchema(this Type type)
   {
-    var options = new JsonSerializerOptions();
+    var options = JsonSerializerOptions.Default;
     var jsonSchemaExporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
     var schemaNode = options.GetJsonSchemaAsNode(type, jsonSchemaExporterOptions);
     return schemaNode.ToString();

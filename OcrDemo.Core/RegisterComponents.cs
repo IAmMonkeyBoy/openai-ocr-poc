@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using OcrDemo.Core.Services;
+using OcrDemo.Core.Services.Document.Identification;
+using OcrDemo.Core.Services.Document.Structuring;
+using OcrDemo.Core.Services.Ocr;
 using OpenAI;
 
 namespace OcrDemo.Core;
@@ -13,7 +16,8 @@ public static class ComponentRegistration
         services.AddKeyedSingleton<IOcrService, TesseractOcrService>(OcrProvider.Tesseract);
         services.AddKeyedSingleton<IOcrService, IronOcrService>(OcrProvider.Iron);
         services.AddKeyedSingleton<IOcrService, OpenAiOcrService>(OcrProvider.OpenAi);
-        services.AddSingleton<IDocumentService, OpenAiDocumentService>();
+        services.AddSingleton<IDocumentIdentificationService, OpenAiDocumentService>();
+        services.AddSingleton<IOcrResponseScoringService, OcrResponseScoringService>();
         return services;
     }
 

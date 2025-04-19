@@ -1,6 +1,6 @@
 ﻿using OcrDemo.Core.Requests;
 
-namespace OcrDemo.Core.Services;
+namespace OcrDemo.Core.Services.Ocr;
 
 public interface IOcrService
 {

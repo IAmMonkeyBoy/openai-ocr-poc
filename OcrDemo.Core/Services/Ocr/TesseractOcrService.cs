@@ -1,9 +1,9 @@
-﻿using TesseractOCR;
+﻿using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Requests;
-using Microsoft.Extensions.Logging;
+using TesseractOCR;
 using TesseractOCR.Enums;
 
-namespace OcrDemo.Core.Services;
+namespace OcrDemo.Core.Services.Ocr;
 
 public class TesseractOcrService : IOcrService, IDisposable
 {

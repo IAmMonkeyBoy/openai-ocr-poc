@@ -5,7 +5,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Represents an invoice issued by a shipping carrier.
 /// </summary>
-public class Invoice
+public class Invoice : IStructuredDocumentParent
 {
     /// <summary>
     /// Unique identifier or code for the invoice.

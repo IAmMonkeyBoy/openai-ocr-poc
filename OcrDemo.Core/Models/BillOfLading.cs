@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace OcrDemo.Core.Models;
 
-public class BillOfLading
+public class BillOfLading : IStructuredDocumentParent
 {
     public string? BillOfLadingNumber { get; set; }
     public DateTime? IssueDate { get; set; }

@@ -8,7 +8,7 @@ using System.Collections.Generic;
 /// <summary>
 /// Represents a single receipt for a fuel purchase (and related items).
 /// </summary>
-public class FuelReceipt
+public class FuelReceipt: IStructuredDocumentParent
 {
     /// <summary>
     /// Unique identifier for the receipt (e.g. transaction # or store receipt #).
