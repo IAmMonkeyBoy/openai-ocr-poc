@@ -17,6 +17,13 @@ public static class TypeExtensions
     var options = JsonSerializerOptions.Default;
     var jsonSchemaExporterOptions = new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true };
     var schemaNode = options.GetJsonSchemaAsNode(type, jsonSchemaExporterOptions);
+  
     return schemaNode.ToString();
+  }
+  public static JsonElement ToJsonSchemaJsonElement(this Type type)
+  {
+    var schema = type.ToJsonSchema();
+    using var doc = JsonDocument.Parse(schema);
+    return doc.RootElement.Clone();
   }
 }

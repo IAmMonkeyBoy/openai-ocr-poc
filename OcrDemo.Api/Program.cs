@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.AI;
 using OcrDemo.Core;
 using OcrDemo.Core.Models;
 using OcrDemo.Core.Requests;
@@ -27,8 +28,14 @@ builder.Services.AddCors(options =>
 
 // Register services from OcrDemo.Core
 
-var openAiApiKey = builder.Configuration["OpenAIServiceOptions:ApiKey"];
-builder.Services.RegisterOcrDemoServices(openAiApiKey);
+var openAiApiKey = builder.Configuration["OpenAIServiceOptions:ApiKey"]?? throw new ArgumentNullException("OpenAI API key is not configured. Please set OpenAIServiceOptions:ApiKey in appsettings.json or environment variables.");
+var ollamaEndpointUrl = builder.Configuration["OllamaServiceOptions:EndpointUrl"] ?? String.Empty;
+                        //throw new ArgumentNullException("Ollama endpoint URL is not configured. Please set OllamaServiceOptions:EndpointUrl in appsettings.json or environment variables.");
+                        var ollamaModel = builder.Configuration["OllamaServiceOptions:Model"] ?? String.Empty;
+                       //throw new ArgumentNullException("Ollama model is not configured. Please set OllamaServiceOptions:Model in appsettings.json or environment variables.");
+builder.Services.RegisterOcrDemoServices(openAiApiKey,
+  ollamaEndpointUrl,
+  ollamaModel);
 
 var app = builder.Build();
 
@@ -71,18 +78,18 @@ app.MapPost("/identify-document", async (HttpRequest request, IDocumentIdentific
 
 // Endpoint 2: OCR Document
 app.MapPost("/ocr-document/{documentType}",
-    async (HttpRequest request, string documentType, IStructuredDocumentService openAiChatService, IOcrResponseScoringService ocrResponseScoringService) =>
+    async (HttpRequest request, string documentType, IStructuredDocumentService openAiChatService, IOcrResponseScoringService ocrResponseScoringService, OllamaStructuredDocumentService oaiChatClient) =>
     {
       switch (documentType.ToLowerInvariant().Replace(" ", "").Replace("_", ""))
       {
         case "billoflading":
-          return Results.Json(await ProcessOcrDocumentAsync<BillOfLading>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await ProcessOcrDocumentAsync<BillOfLading>(request, documentType, oaiChatClient, ocrResponseScoringService), jsonOptions);
         case "invoice":
-          return Results.Json(await ProcessOcrDocumentAsync<Invoice>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await ProcessOcrDocumentAsync<Invoice>(request, documentType, oaiChatClient, ocrResponseScoringService), jsonOptions);
         case "rateconfirmation":
-          return Results.Json(await ProcessOcrDocumentAsync<RateConfirmation>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await ProcessOcrDocumentAsync<RateConfirmation>(request, documentType, oaiChatClient, ocrResponseScoringService), jsonOptions);
         case "fuelreceipt":
-          return Results.Json(await ProcessOcrDocumentAsync<FuelReceipt>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await ProcessOcrDocumentAsync<FuelReceipt>(request, documentType, oaiChatClient, ocrResponseScoringService), jsonOptions);
       }
       return Results.BadRequest("Document type is not supported.");
 
