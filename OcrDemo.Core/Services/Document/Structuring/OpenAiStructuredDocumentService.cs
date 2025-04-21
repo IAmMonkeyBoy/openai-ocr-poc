@@ -46,6 +46,10 @@ public class OpenAiStructuredDocumentService(
     return JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions());
   }
 
+  public Task<List<string>> GetAvailableModels() => Task.FromResult(new List<string>(){"gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"});
+  public string GetProviderName() => "OpenAiLibrary";
+  public string GetProviderDisplayName() => "OpenAI";
+
 
   private static string GeneratePrompt(Type type)
   {

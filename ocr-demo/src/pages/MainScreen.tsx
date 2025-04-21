@@ -1,15 +1,119 @@
-﻿import React, { useState } from 'react';
-import { Box,   Typography,  Button, FormControl, MenuItem, Select, SelectChangeEvent } from '@mui/material';
+﻿import { useState, useEffect } from 'react';
+import { Box,   Typography,  Button, FormControl, MenuItem, Select, SelectChangeEvent, InputLabel } from '@mui/material';
+
 
 import UploadFile from '@mui/icons-material/UploadFile';
 import { useDropzone } from 'react-dropzone';
 import OcrResultDisplay from '../components/OcrResultDisplay';
 import QualityAssessmentDisplay from '../components/QualityAssessmentDisplay';
-import DocumentService, {OcrDocumentResponse} from '../services/DocumentService';
+import DocumentService, {OcrDocumentResponse, ModelProvider} from '../services/DocumentService';
+
 
 
 
 const MainScreen: React.FC = () => {
+    const [availableModels, setAvailableModels] = useState<{label: string, value: string}[]>([]);
+    const [selectedModel, setSelectedModel] = useState<string>('');
+    const [isLoadingModels, setIsLoadingModels] = useState<boolean>(false);
+
+    const handleModelChange = (event: SelectChangeEvent) => {
+        setSelectedModel(event.target.value);
+    };
+
+    
+    useEffect(() => {
+        const fetchModels = async () => {
+            setIsLoadingModels(true);
+            try {
+                const modelProviders = await DocumentService.getAvailableModels();
+                const models: {label: string, value: string}[] = [];
+                
+                modelProviders.forEach((provider: ModelProvider) => {
+                    provider.SupportedModels.forEach(model => {
+                        models.push({
+                            label: `${provider.ProviderDisplayName} - ${model}`,
+                            value: `${provider.ProviderName}:${model}`
+                        });
+                    });
+                });
+                
+                setAvailableModels(models);
+                if (models.length > 0) {
+                    setSelectedModel(models[0].value);
+                }
+            } catch (error) {
+                console.error("Failed to fetch models:", error);
+            } finally {
+                setIsLoadingModels(false);
+            }
+        };
+        
+        fetchModels();
+    }, []);
+
+    useEffect(() => {
+        const fetchModels = async () => {
+            setIsLoadingModels(true);
+            try {
+                const modelProviders = await DocumentService.getAvailableModels();
+                const models: {label: string, value: string}[] = [];
+                
+                modelProviders.forEach((provider: ModelProvider) => {
+                    provider.SupportedModels.forEach(model => {
+                        models.push({
+                            label: `${provider.ProviderDisplayName} - ${model}`,
+                            value: `${provider.ProviderName}:${model}`
+                        });
+                    });
+                });
+                
+                setAvailableModels(models);
+                if (models.length > 0) {
+                    setSelectedModel(models[0].value);
+                }
+            } catch (error) {
+                console.error("Failed to fetch models:", error);
+            } finally {
+                setIsLoadingModels(false);
+            }
+        };
+        
+        fetchModels();
+    }, []);
+
+
+
+    useEffect(() => {
+        const fetchModels = async () => {
+            setIsLoadingModels(true);
+            try {
+                const modelProviders = await DocumentService.getAvailableModels();
+                const models: {label: string, value: string}[] = [];
+                
+                modelProviders.forEach((provider: ModelProvider) => {
+                    provider.SupportedModels.forEach(model => {
+                        models.push({
+                            label: `${provider.ProviderDisplayName} - ${model}`,
+                            value: `${provider.ProviderName}:${model}`
+                        });
+                    });
+                });
+                
+                setAvailableModels(models);
+                if (models.length > 0) {
+                    setSelectedModel(models[0].value);
+                }
+            } catch (error) {
+                console.error("Failed to fetch models:", error);
+            } finally {
+                setIsLoadingModels(false);
+            }
+        };
+        
+        fetchModels();
+    }, []);
+
+
 
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [documentType, setDocumentType] = useState<string>('');
@@ -34,6 +138,8 @@ const MainScreen: React.FC = () => {
         }
     };
 
+
+    
     const handleDocumentTypeChange = (event: SelectChangeEvent) => {
         setDocumentType(event.target.value);
     };
@@ -76,7 +182,7 @@ const MainScreen: React.FC = () => {
         }
         try {
             setLoading(true);
-            const response = await DocumentService.ocrDocument(uploadedFile, documentType);
+            const response = await DocumentService.ocrDocument(uploadedFile, documentType, selectedModel);
             setOcrResult(response);
             console.log("OCR Response:", response);
         } catch (error) {
@@ -200,6 +306,24 @@ const MainScreen: React.FC = () => {
                             </Select>
                         </FormControl>
                     </Box>
+                    
+                    <FormControl fullWidth sx={{ mt: 1 }}>
+                        <InputLabel id="model-select-label">Model</InputLabel>
+                        <Select
+                            labelId="model-select-label"
+                            id="model-select"
+                            value={selectedModel}
+                            label="Model"
+                            onChange={handleModelChange}
+                            disabled={isLoadingModels}
+                        >
+                            {availableModels.map((model) => (
+                                <MenuItem key={model.value} value={model.value}>
+                                    {model.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     <Button
                         variant="contained"
                         color="secondary"

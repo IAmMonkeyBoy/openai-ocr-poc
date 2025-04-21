@@ -23,12 +23,13 @@ public static class ComponentRegistration
           .UseLogging();
         
          services.AddKeyedChatClient(
-             ChatProvider.Ollama, new OllamaChatClient("http://127.0.0.1:11434", "llama3.1"))
+             ChatProvider.Ollama, new OllamaChatClient("http://127.0.0.1:11434", "llama3.2"))
            .UseDistributedCache()
+           
            .UseLogging();
         services.AddSingleton<IStructuredDocumentService, OpenAiStructuredDocumentService>();
-        services.AddSingleton<OllamaStructuredDocumentService>();
-        services.AddSingleton<MsOpenAiStructuredDocumentService>();
+        services.AddSingleton<IStructuredDocumentService, OllamaStructuredDocumentService>();
+        services.AddSingleton<IStructuredDocumentService, MsOpenAiStructuredDocumentService>();
         services.AddKeyedSingleton<IOcrService, TesseractOcrService>(OcrProvider.Tesseract);
         services.AddKeyedSingleton<IOcrService, IronOcrService>(OcrProvider.Iron);
         services.AddKeyedSingleton<IOcrService, OpenAiOcrService>(OcrProvider.OpenAi);

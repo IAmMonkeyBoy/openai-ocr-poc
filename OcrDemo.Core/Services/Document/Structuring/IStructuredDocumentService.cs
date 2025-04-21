@@ -9,5 +9,8 @@ public interface IStructuredDocumentService
 {
 
     Task<T?> OcrDocument<T>(OcrRequest request);
+    Task<List<string>> GetAvailableModels();
+    string GetProviderName();
+    string GetProviderDisplayName();
 }
 

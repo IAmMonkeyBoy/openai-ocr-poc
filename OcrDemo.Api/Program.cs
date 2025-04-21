@@ -96,6 +96,18 @@ app.MapPost("/ocr-document/{documentType}",
     })
   .WithName("OcrDocument");
 
+app.MapGet("/models", async (IEnumerable<IStructuredDocumentService> services) =>
+{
+  var models = await Task.WhenAll(services.Select(async s => new ModelsResponseItem()
+  {
+    ServiceType = s.GetType().Name,
+    SupportedModels = await s.GetAvailableModels(),
+    ProviderName = s.GetProviderName(),
+    ProviderDisplayName = s.GetProviderDisplayName()
+  }));
+  return Results.Json(models, jsonOptions);
+}).WithName("GetModels");
+
 app.Run();
 return;
 
