@@ -5,7 +5,20 @@ export interface IdentifyDocumentResponse {
 }
 
 export interface OcrDocumentResponse {
- document: string;
+ Document: string;
+
+}
+
+export interface QualityAssessment{
+    FieldEvaluations: FieldEvaluation[];
+}
+
+export interface FieldEvaluation
+{
+    FieldName: string;
+    IsPresent: boolean;
+    Priority: "High" | "Medium" | "Low" | "None";
+    Value: string;
 }
 
 const API_BASE_URL = "http://localhost:5194/";

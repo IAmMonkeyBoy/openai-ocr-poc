@@ -78,9 +78,9 @@ const OcrResultDisplay: React.FC<OcrResultDisplayProps> = ({ loading, ocrResult,
         let documentData;
         try {
             // Parse only if it's a string
-            documentData = typeof ocrResult.document === 'string'
-                ? JSON.parse(ocrResult.document)
-                : ocrResult.document;
+            documentData = typeof ocrResult.Document === 'string'
+                ? JSON.parse(ocrResult.Document)
+                : ocrResult.Document;
         } catch (error) {
             console.error('Failed to parse document:', error);
             return (

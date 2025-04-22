@@ -4,6 +4,7 @@ import { Box,   Typography,  Button, FormControl, MenuItem, Select, SelectChange
 import UploadFile from '@mui/icons-material/UploadFile';
 import { useDropzone } from 'react-dropzone';
 import OcrResultDisplay from '../components/OcrResultDisplay';
+import QualityAssessmentDisplay from '../components/QualityAssessmentDisplay';
 import DocumentService, {OcrDocumentResponse} from '../services/DocumentService';
 
 
@@ -106,7 +107,7 @@ const MainScreen: React.FC = () => {
                 sx={{
                     flexGrow: 1,
                     display: 'grid',
-                    gridTemplateColumns: '400px 1fr',
+                    gridTemplateColumns: '400px 1fr 1fr',
                     gap: '16px',
                     height: '100vh', // Constrain to viewport height
                     overflow: 'hidden', // Prevent content overflow
@@ -231,6 +232,20 @@ const MainScreen: React.FC = () => {
                     <OcrResultDisplay loading={loading} ocrResult={ocrResult} documentType={documentType} />
                 </Box>
 
+                <Box
+                    sx={{
+
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'flex-start', // Align content to the top
+                        height: '100%',
+                        width: '100%',
+                        overflow: 'auto', // Allow independent scrolling
+                        padding: '16px', // Add padding to prevent cutting off
+                    }}
+                >
+                    <QualityAssessmentDisplay qualityAssessment={ocrResult?.QualityAssessment || null} />
+                </Box>
                 
             </Box>
         </Box>
