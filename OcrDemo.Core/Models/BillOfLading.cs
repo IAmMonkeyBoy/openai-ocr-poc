@@ -1,8 +1,4 @@
-﻿
-using System;
-using System.Collections.Generic;
-
-namespace OcrDemo.Core.Models;
+﻿namespace OcrDemo.Core.Models;
 
 public class BillOfLading : IStructuredDocumentParent
 {
