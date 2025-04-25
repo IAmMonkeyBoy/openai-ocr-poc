@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Requests;
 using OcrDemo.Core.Utils;
@@ -43,7 +44,7 @@ public class OpenAiStructuredDocumentService(
 
     var result = await _openAiClient.GetChatClient("gpt-4o").CompleteChatAsync(messages, options);
     var outputAsText = result.Value.Content.FirstOrDefault()?.Text ?? string.Empty;
-    return JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions());
+    return JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions() {NumberHandling = JsonNumberHandling.AllowReadingFromString});
   }
 
 

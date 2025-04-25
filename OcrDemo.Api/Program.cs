@@ -71,7 +71,7 @@ app.MapPost("/identify-document", async (HttpRequest request, IDocumentIdentific
 
 // Endpoint 2: OCR Document
 app.MapPost("/ocr-document/{documentType}",
-    async (HttpRequest request, string documentType, IStructuredDocumentService openAiChatService, IOcrResponseScoringService ocrResponseScoringService) =>
+    async (HttpRequest request, string documentType, OllamaStructuredDocumentService openAiChatService, IOcrResponseScoringService ocrResponseScoringService) =>
     {
       switch (documentType.ToLowerInvariant().Replace(" ", "").Replace("_", ""))
       {
