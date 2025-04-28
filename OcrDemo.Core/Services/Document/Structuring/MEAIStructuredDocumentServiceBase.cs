@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Requests;
 using OcrDemo.Core.Utils;
@@ -77,4 +78,17 @@ public class MEAIStructuredDocumentServiceBase(
         chatOptions, true);
     return response.Result;
   }
+
+  public string LLMName { get; set; } = "Microsoft.Extensions.AI";
+  public string Description { get; set; } = "MEAIStructuredDocumentServiceBase is a base class for structured document services using Microsoft.Extensions.AI.";
+  public Task<List<LLMModel>> GetModels() => Task.FromResult(new List<LLMModel>
+  {
+    new LLMModel
+    {
+      Name = "gpt-4o",
+      Description = "GPT-4o is a multimodal model that can process both text and images.",
+      IsDefault = true
+    }
+  });
+
 }

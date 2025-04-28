@@ -1,20 +1,19 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
+using OcrDemo.Api.Requests;
+using OcrDemo.Api.Responses;
 using OcrDemo.Core;
 using OcrDemo.Core.Models;
 using OcrDemo.Core.Requests;
-using OcrDemo.Core.Responses;
 using OcrDemo.Core.Services;
 using OcrDemo.Core.Services.Document.Identification;
 using OcrDemo.Core.Services.Document.Structuring;
-using TesseractOCR.Renderers;
 
 var builder = WebApplication.CreateBuilder(args);
+var openAiApiKey = builder.Configuration["OpenAIServiceOptions:ApiKey"];
 
 // Add services to the container.
 builder.Services.AddAuthorization();
-
-// Add CORS services
 builder.Services.AddCors(options =>
 {
   options.AddPolicy("AllowFrontend", policy =>
@@ -24,37 +23,26 @@ builder.Services.AddCors(options =>
       .AllowAnyMethod();
   });
 });
-
-// Register services from OcrDemo.Core
-
-var openAiApiKey = builder.Configuration["OpenAIServiceOptions:ApiKey"];
 builder.Services.RegisterOcrDemoServices(openAiApiKey);
 
 var app = builder.Build();
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
   app.MapOpenApi();
 }
-
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
-// Use CORS
 app.UseCors("AllowFrontend");
 
-// Configure JSON serialization to use Pascal case globally
+
 var jsonOptions = new System.Text.Json.JsonSerializerOptions
 {
-  PropertyNamingPolicy = null // Use Pascal case
-  , Converters = { new JsonStringEnumConverter() }
+  PropertyNamingPolicy = null,
+  Converters = { new JsonStringEnumConverter() }
 };
 
 
-// Endpoint 1: Identify Document Type
-app.MapPost("/identify-document", async (HttpRequest request, IDocumentIdentificationService documentService) =>
+app.MapPost("/identify-document", async (  HttpRequest request, IDocumentIdentificationService documentService) =>
   {
     if (!request.HasFormContentType || request.Form.Files.Count == 0)
     {
@@ -67,64 +55,123 @@ app.MapPost("/identify-document", async (HttpRequest request, IDocumentIdentific
     var response = await documentService.IdentifyDocument(identifyRequest);
     return Results.Json(response, jsonOptions); // Apply Pascal case serialization
   })
-  .WithName("IdentifyDocument");
+  .WithName("IdentifyDocument")
+  .DisableAntiforgery();
 
-// Endpoint 2: OCR Document
+
+
 app.MapPost("/ocr-document/{documentType}",
-    async (HttpRequest request, string documentType, OllamaStructuredDocumentService openAiChatService, IOcrResponseScoringService ocrResponseScoringService) =>
+    async (
+      [FromForm]GenerateStructuredDocumentRequest request,
+      [FromForm]IFormFileCollection files,
+      [FromRoute] string documentType, 
+//      IServiceProvider services,
+      [FromKeyedServices(nameof(OpenAiStructuredDocumentService))] IStructuredDocumentService openAiService,
+      [FromKeyedServices(nameof(OllamaStructuredDocumentService))] IStructuredDocumentService ollamaService,
+      IOcrResponseScoringService ocrResponseScoringService) =>
     {
+      Dictionary<string, IStructuredDocumentService> services = new Dictionary<string, IStructuredDocumentService>() 
+      {
+        { nameof(OpenAiStructuredDocumentService), openAiService },
+        { nameof(OllamaStructuredDocumentService), ollamaService }
+      };
+      
+      var structuredDocumentServiceId = request.StructuredDocumentServiceId ?? nameof(OpenAiStructuredDocumentService);
+      var documentService = services[structuredDocumentServiceId];
+      var file = files.First();
+      var ocrRequest = new OcrRequest { FileName = file.FileName, FileContent = file.OpenReadStream() };
+      
       switch (documentType.ToLowerInvariant().Replace(" ", "").Replace("_", ""))
       {
         case "billoflading":
-          return Results.Json(await ProcessOcrDocumentAsync<BillOfLading>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return  
+            Results.Json(await StructureDocumentHelper<BillOfLading>(ocrRequest, documentService, ocrResponseScoringService));
         case "invoice":
-          return Results.Json(await ProcessOcrDocumentAsync<Invoice>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await StructureDocumentHelper<Invoice>(ocrRequest, documentService, ocrResponseScoringService));
         case "rateconfirmation":
-          return Results.Json(await ProcessOcrDocumentAsync<RateConfirmation>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await StructureDocumentHelper<RateConfirmation>(ocrRequest, documentService, ocrResponseScoringService));
         case "fuelreceipt":
-          return Results.Json(await ProcessOcrDocumentAsync<FuelReceipt>(request, documentType, openAiChatService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(await StructureDocumentHelper<FuelReceipt>(ocrRequest, documentService, ocrResponseScoringService));
       }
       return Results.BadRequest("Document type is not supported.");
-
     })
-  .WithName("OcrDocument");
+  .WithName("OcrDocument")
+  .DisableAntiforgery();
+
+
+app.MapGet("/llm-services", async (
+    HttpRequest request, 
+    [FromKeyedServices(nameof(OpenAiStructuredDocumentService))]IStructuredDocumentService oaiService, 
+    [FromKeyedServices(nameof(OllamaStructuredDocumentService))]IStructuredDocumentService ollamaService) =>
+  {
+    IStructuredDocumentService[] structuredDocumentServices =
+      new[] { oaiService, ollamaService};
+    var returnValue = new List<GetLLMResponseItem>();
+      
+      foreach (var s in structuredDocumentServices)
+      {
+        var availableModels = await s.GetModels();
+        var models = availableModels.Select(m => new GetLLMResponseItemModel()
+        {
+          Name = m.Name,
+          Description = m.Description ?? "No description available.",
+          ModelType = m.ModelType ?? "Unknown",
+          IsDefault = m.IsDefault
+        }).ToList();
+      
+        returnValue.Add(new GetLLMResponseItem()
+        {
+          Name = s.LLMName ?? s.GetType().Name,
+          ServiceId = s.GetType().Name,
+          Description = s.Description ?? "No description available.",
+          Models = models
+        });
+      }
+    
+
+    return Results.Json(returnValue, jsonOptions);
+  })
+  .WithName("LLMServices")
+  .DisableAntiforgery();
+
+
+
+
+app.MapGet("/ocr-services", async (HttpRequest request, IServiceProvider services) =>
+  {
+    IStructuredDocumentService[] structuredDocumentServices =
+      services.GetServices<IStructuredDocumentService>().ToArray();
+    
+    var keyedServices = services.GetServices<IStructuredDocumentService>();
+    
+    var returnValue = new List<GetOcrResponseItem>();
+    returnValue.AddRange(
+      structuredDocumentServices.Select( s => new GetOcrResponseItem()
+      {
+        Name = s.LLMName,
+        ServiceId = nameof(s),
+        Description = s.Description ?? "No description available.",
+      }).ToList());
+    
+
+    return Results.Json(returnValue, jsonOptions);
+  })
+  .WithName("OCRServices")
+  .DisableAntiforgery();
 
 app.Run();
 return;
 
 
-static async Task<OcrAndStructureResponseBase<T>> ProcessOcrDocumentAsync<T>(
-  HttpRequest request,
-  string documentType,
-  IStructuredDocumentService openAiChatService,
+
+
+
+async Task<GenerateStructuredDocumentResponseImpl<T>> StructureDocumentHelper<T>(OcrRequest ocrRequest,
+  IStructuredDocumentService structuredDocumentService,
   IOcrResponseScoringService ocrResponseScoringService) 
   where T : IStructuredDocumentParent, new()
 {
-  if (string.IsNullOrWhiteSpace(documentType))
-  {
-    //return Results.BadRequest("Document type is required.");
-  }
-
-  if (!request.HasFormContentType || request.Form.Files.Count == 0)
-  {
-    //return Results.BadRequest("No file uploaded.");
-  }
-
-  var file = request.Form.Files[0];
-  var ocrRequest = new OcrRequest
-  {
-    FileName = file.FileName,
-    FileContent = file.OpenReadStream()
-  };
-
-  var document = await openAiChatService.OcrDocument<T>(ocrRequest);
-
-
-  if (document == null)
-  {
-    //return // Results.BadRequest("Document type is not supported.");
-  }
-
-  var score = await ocrResponseScoringService.ScoreDocumentAsync(document);
-  return new OcrAndStructureResponseBase<T>(document, score);
+  var doc = await structuredDocumentService.OcrDocument<T>(ocrRequest);
+  var score = await ocrResponseScoringService.ScoreDocumentAsync(doc);
+  return new GenerateStructuredDocumentResponseImpl<T>(doc, score);
 }

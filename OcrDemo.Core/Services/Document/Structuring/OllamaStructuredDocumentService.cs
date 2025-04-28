@@ -72,5 +72,18 @@ public class OllamaStructuredDocumentService(ILogger<OllamaStructuredDocumentSer
     }) ?? throw new InvalidOperationException("Deserialization returned null.");
     return result;
   }
+
+  
+  public async Task<List<LLMModel>> GetModels()
+  {
+    var models = await _client.ListLocalModelsAsync();
+    return models.Select(m => new LLMModel(){Name = m.Name}).ToList();
+  }
+  public string LLMName { get; set; } = "Ollama";
+
+ 
+
+  public string Description { get; set; } = "Ollama is a tool that allows you to run large language models locally.";
+  
 }
 

@@ -47,6 +47,21 @@ public class OpenAiStructuredDocumentService(
     return JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions() {NumberHandling = JsonNumberHandling.AllowReadingFromString});
   }
 
+  public string LLMName { get; set; } = "OpenAI Chat";
+  public string Description { get; set; } = "OpenAI";
+
+  
+  public Task<List<LLMModel>> GetModels() => Task.FromResult(new List<LLMModel>
+  {
+    new LLMModel
+    {
+      Name = "gpt-4o",
+      Description = "GPT-4o is a multimodal model that can process both text and images.",
+      IsDefault = true
+    }
+  });
+ 
+
 
   private static string GeneratePrompt(Type type)
   {

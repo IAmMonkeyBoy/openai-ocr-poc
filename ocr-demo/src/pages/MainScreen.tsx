@@ -1,11 +1,11 @@
-﻿import React, { useState } from 'react';
-import { Box,   Typography,  Button, FormControl, MenuItem, Select, SelectChangeEvent } from '@mui/material';
+﻿import React, { useState, useEffect } from 'react';
+import { Box,   Typography,  Button, FormControl, MenuItem, Select, SelectChangeEvent, InputLabel, Stack } from '@mui/material';
 
 import UploadFile from '@mui/icons-material/UploadFile';
 import { useDropzone } from 'react-dropzone';
 import OcrResultDisplay from '../components/OcrResultDisplay';
 import QualityAssessmentDisplay from '../components/QualityAssessmentDisplay';
-import DocumentService, {OcrDocumentResponse} from '../services/DocumentService';
+import DocumentService, {OcrDocumentResponse, OCRService, LLMService, LLMModel} from '../services/DocumentService';
 
 
 
@@ -14,11 +14,62 @@ const MainScreen: React.FC = () => {
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [documentType, setDocumentType] = useState<string>('');
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [ocrProvider, setOcrProvider] = useState<string>('');
+    const [llm, setLlm] = useState<string>('');
+    const [selectedModel, setSelectedModel] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [ocrResult, setOcrResult] = useState<OcrDocumentResponse | null>(null);
+    const [ocrServices, setOcrServices] = useState<OCRService[]>([]);
+    const [llmServices, setLlmServices] = useState<LLMService[]>([]);
+    const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
 
 
 
+    useEffect(() => {
+        // Fetch OCR and LLM services when on mount
+        const fetchServices = async () => {
+            try {
+                const [ocrServicesData, llmServicesData] = await Promise.all([
+                    DocumentService.getOCRServices(),
+                    DocumentService.getLLMServices()
+                ]);
+                
+                setOcrServices(ocrServicesData);
+                setLlmServices(llmServicesData);
+                
+                // Set default values if available
+                if (ocrServicesData.length > 0) {
+                    setOcrProvider(ocrServicesData[0].ServiceId);
+                }
+                
+                if (llmServicesData.length > 0) {
+                    // Find the default model if it exists
+                    const defaultService = llmServicesData[0];
+                    setLlm(defaultService.ServiceId);
+                    
+                    // Set available models for the selected LLM service
+                    setLlmModels(defaultService.Models);
+                    
+                    // Set default model if available
+                    if (defaultService.Models && defaultService.Models.length > 0) {
+                        // Try to find a default model first
+                        const defaultModel = defaultService.Models.find(model => model.IsDefault);
+                        if (defaultModel) {
+                            setSelectedModel(defaultModel.Name);
+                        } else if (defaultService.Models.length > 0) {
+                            // Otherwise use the first model
+                            setSelectedModel(defaultService.Models[0].Name);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching services:", error);
+            }
+        };
+        
+        fetchServices();
+    }, []);
+    
     const onDrop = (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         if (file) {
@@ -36,6 +87,42 @@ const MainScreen: React.FC = () => {
 
     const handleDocumentTypeChange = (event: SelectChangeEvent) => {
         setDocumentType(event.target.value);
+    };
+    
+    const handleOcrProviderChange = (event: SelectChangeEvent) => {
+        setOcrProvider(event.target.value);
+    };
+    
+    const handleLlmChange = (event: SelectChangeEvent) => {
+        const selectedLlmType = event.target.value;
+        setLlm(selectedLlmType);
+        
+        // Update models when LLM service changes
+        const selectedService = llmServices.find(service => service.ServiceId === selectedLlmType);
+        if (selectedService) {
+            setLlmModels(selectedService.Models);
+            
+            // Set default model if available
+            if (selectedService.Models && selectedService.Models.length > 0) {
+                // Try to find a default model first
+                const defaultModel = selectedService.Models.find(model => model.IsDefault);
+                if (defaultModel) {
+                    setSelectedModel(defaultModel.Name);
+                } else {
+                    // Otherwise use the first model
+                    setSelectedModel(selectedService.Models[0].Name);
+                }
+            } else {
+                setSelectedModel('');
+            }
+        } else {
+            setLlmModels([]);
+            setSelectedModel('');
+        }
+    };
+    
+    const handleModelChange = (event: SelectChangeEvent) => {
+        setSelectedModel(event.target.value);
     };
 
     const handleIdentifyDocument = async () => {
@@ -74,9 +161,13 @@ const MainScreen: React.FC = () => {
             console.error("No file uploaded.");
             return;
         }
+        if (!ocrProvider) {
+            console.error("No OCR provider selected.");
+            return;
+        }
         try {
             setLoading(true);
-            const response = await DocumentService.ocrDocument(uploadedFile, documentType);
+            const response = await DocumentService.ocrDocument(uploadedFile, documentType, llm, ocrProvider);
             setOcrResult(response);
             console.log("OCR Response:", response);
         } catch (error) {
@@ -185,7 +276,9 @@ const MainScreen: React.FC = () => {
                         </Button>
 
                         <FormControl sx={{ flexGrow: 1, marginLeft: '16px' }}>
+                            <InputLabel id="document-type-label">Document Type</InputLabel>
                             <Select
+                                label="Document Type"
                                 labelId="document-type-label"
                                 value={documentType}
                                 onChange={handleDocumentTypeChange}
@@ -200,17 +293,81 @@ const MainScreen: React.FC = () => {
                             </Select>
                         </FormControl>
                     </Box>
+                    
+                    
+                    <Stack direction="row" spacing={2} sx={{ width: '100%', marginTop: '16px' }}>
+
+
+                        <FormControl sx={{ flexGrow: 1, marginLeft: '16px' }}>
+                            <InputLabel id="ocr-provider-label">Ocr Provider</InputLabel>
+                            <Select
+                                label="Ocr Provider"
+                                labelId="ocr-provider-label"
+                                value={ocrProvider}
+                                onChange={handleOcrProviderChange}
+                            >
+                                <MenuItem value="None - Use LLM">
+                                    <em>None - Use LLM</em>
+                                </MenuItem>
+                                {ocrServices.map((service) => (
+                                    <MenuItem key={service.ServiceId} value={service.ServiceId}>
+                                        {service.Name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl sx={{ flexGrow: 1, marginLeft: '16px' }}>
+                            <InputLabel id="llm-label">LLM</InputLabel>
+                            <Select
+                                label="LLM"
+                                labelId="llm-label"
+                                value={llm}
+                                onChange={handleLlmChange}
+                            >
+                                <MenuItem value="">
+                                    <em>None</em>
+                                </MenuItem>
+                                {llmServices.map((service) => (
+                                    <MenuItem key={service.ServiceId} value={service.ServiceId}>
+                                        {service.Name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                                            </Stack>
+                                            
+                                            {/* Model selector - only show when an LLM is selected */}
+                                            {llm && llmModels.length > 0 && (
+                        <FormControl sx={{ width: '100%' }}>
+                            <InputLabel id="model-label">Model</InputLabel>
+                            <Select
+                                label="Model"
+                                labelId="model-label"
+                                value={selectedModel}
+                                onChange={handleModelChange}
+                            >
+                                {llmModels.map((model) => (
+                                    <MenuItem 
+                                        key={model.Name} 
+                                        value={model.Name}
+                                    >
+                                        {model.Name} {model.IsDefault && '(Default)'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                                            )}
                     <Button
                         variant="contained"
                         color="secondary"
                         disabled={!documentType}
-                        onClick = {handleOcrDocument}
+                        onClick={handleOcrDocument}
                         sx={{
                             marginTop: '16px',
                             width: '100%', // Full width of the parent container
                         }}
                     >
-                        OCR {documentType}
+                        OCR {documentType} {selectedModel ? `using ${selectedModel}` : ''}
                     </Button>
                 </Box>
 
