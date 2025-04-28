@@ -30,6 +30,7 @@ if (app.Environment.IsDevelopment())
 {
   app.MapOpenApi();
 }
+
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.UseCors("AllowFrontend");
@@ -37,21 +38,21 @@ app.UseCors("AllowFrontend");
 
 var jsonOptions = new System.Text.Json.JsonSerializerOptions
 {
-  PropertyNamingPolicy = null,
-  Converters = { new JsonStringEnumConverter() }
+  PropertyNamingPolicy = null, Converters = { new JsonStringEnumConverter() }
 };
 
 
-app.MapPost("/identify-document", async (  HttpRequest request, IDocumentIdentificationService documentService) =>
+app.MapPost("/identify-document", async (HttpRequest request, IDocumentIdentificationService documentService) =>
   {
     if (!request.HasFormContentType || request.Form.Files.Count == 0)
     {
       return Results.BadRequest("No file uploaded.");
     }
-
     var file = request.Form.Files[0];
-    var identifyRequest = new DocumentRequest { FileName = file.FileName, FileContent = file.OpenReadStream() , Model = String.Empty};
-
+    var identifyRequest = new DocumentRequest
+    {
+      FileName = file.FileName, FileContent = file.OpenReadStream(), Model = String.Empty
+    };
     var response = await documentService.IdentifyDocument(identifyRequest);
     return Results.Json(response, jsonOptions); // Apply Pascal case serialization
   })
@@ -59,39 +60,51 @@ app.MapPost("/identify-document", async (  HttpRequest request, IDocumentIdentif
   .DisableAntiforgery();
 
 
-
 app.MapPost("/ocr-document/{documentType}",
     async (
-      [FromForm]GenerateStructuredDocumentRequest request,
-      [FromForm]IFormFileCollection files,
-      [FromRoute] string documentType, 
-//      IServiceProvider services,
-      [FromKeyedServices(nameof(OpenAiStructuredDocumentService))] IStructuredDocumentService openAiService,
-      [FromKeyedServices(nameof(OllamaStructuredDocumentService))] IStructuredDocumentService ollamaService,
+      [FromForm] GenerateStructuredDocumentRequest request,
+      [FromForm] IFormFileCollection files,
+      [FromRoute] string documentType,
+      [FromKeyedServices(nameof(OpenAiStructuredDocumentService))]
+      IStructuredDocumentService openAiService,
+      [FromKeyedServices(nameof(OllamaStructuredDocumentService))]
+      IStructuredDocumentService ollamaService,
+      [FromKeyedServices(nameof(MEAIStructuredDocumentServiceBase))]
+      IStructuredDocumentService meaiService,
       IOcrResponseScoringService ocrResponseScoringService) =>
     {
-      Dictionary<string, IStructuredDocumentService> services = new Dictionary<string, IStructuredDocumentService>() 
+      Dictionary<string, IStructuredDocumentService> services = new Dictionary<string, IStructuredDocumentService>()
       {
         { nameof(OpenAiStructuredDocumentService), openAiService },
-        { nameof(OllamaStructuredDocumentService), ollamaService }
+        { nameof(OllamaStructuredDocumentService), ollamaService },
+        { nameof(MEAIStructuredDocumentServiceBase), meaiService }
       };
-      
       var structuredDocumentServiceId = request.StructuredDocumentServiceId ?? nameof(OpenAiStructuredDocumentService);
       var documentService = services[structuredDocumentServiceId];
       var file = files.First();
-      var ocrRequest = new OcrRequest { FileName = file.FileName, FileContent = file.OpenReadStream() , Model = request.Model};
-      
+      var ocrRequest = new OcrRequest
+      {
+        FileName = file.FileName, FileContent = file.OpenReadStream(), Model = request.Model
+      };
       switch (documentType.ToLowerInvariant().Replace(" ", "").Replace("_", ""))
       {
         case "billoflading":
-          return  
-            Results.Json(await StructureDocumentHelper<BillOfLading>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
+          return
+            Results.Json(
+              await StructureDocumentHelper<BillOfLading>(ocrRequest, documentService, ocrResponseScoringService),
+              jsonOptions);
         case "invoice":
-          return Results.Json(await StructureDocumentHelper<Invoice>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(
+            await StructureDocumentHelper<Invoice>(ocrRequest, documentService, ocrResponseScoringService),
+            jsonOptions);
         case "rateconfirmation":
-          return Results.Json(await StructureDocumentHelper<RateConfirmation>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(
+            await StructureDocumentHelper<RateConfirmation>(ocrRequest, documentService, ocrResponseScoringService),
+            jsonOptions);
         case "fuelreceipt":
-          return Results.Json(await StructureDocumentHelper<FuelReceipt>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
+          return Results.Json(
+            await StructureDocumentHelper<FuelReceipt>(ocrRequest, documentService, ocrResponseScoringService),
+            jsonOptions);
       }
       return Results.BadRequest("Document type is not supported.");
     })
@@ -100,60 +113,51 @@ app.MapPost("/ocr-document/{documentType}",
 
 
 app.MapGet("/llm-services", async (
-    HttpRequest request, 
-    [FromKeyedServices(nameof(OpenAiStructuredDocumentService))]IStructuredDocumentService oaiService, 
-    [FromKeyedServices(nameof(OllamaStructuredDocumentService))]IStructuredDocumentService ollamaService) =>
+    HttpRequest request,
+    [FromKeyedServices(nameof(OpenAiStructuredDocumentService))]
+    IStructuredDocumentService oaiService,
+    [FromKeyedServices(nameof(OllamaStructuredDocumentService))]
+    IStructuredDocumentService ollamaService,
+    [FromKeyedServices(nameof(MEAIStructuredDocumentServiceBase))]
+    IStructuredDocumentService meaiService) =>
   {
-    IStructuredDocumentService[] structuredDocumentServices =
-      new[] { oaiService, ollamaService};
+    var structuredDocumentServices = new[] { oaiService, ollamaService, meaiService };
     var returnValue = new List<GetLLMResponseItem>();
-      
-      foreach (var s in structuredDocumentServices)
+    foreach (var s in structuredDocumentServices)
+    {
+      var availableModels = await s.GetModels();
+      var models = availableModels.Select(m => new GetLLMResponseItemModel()
       {
-        var availableModels = await s.GetModels();
-        var models = availableModels.Select(m => new GetLLMResponseItemModel()
-        {
-          Name = m.Name,
-          Description = m.Description ?? "No description available.",
-          ModelType = m.ModelType ?? "Unknown",
-          IsDefault = m.IsDefault
-        }).ToList();
-      
-        returnValue.Add(new GetLLMResponseItem()
-        {
-          Name = s.LLMName ?? s.GetType().Name,
-          ServiceId = s.GetType().Name,
-          Description = s.Description ?? "No description available.",
-          Models = models
-        });
-      }
-    
+        Name = m.Name,
+        Description = m.Description ?? "No description available.",
+        ModelType = m.ModelType ?? "Unknown",
+        IsDefault = m.IsDefault
+      }).ToList();
 
+      returnValue.Add(new GetLLMResponseItem()
+      {
+        Name = s.LLMName ?? s.GetType().Name,
+        ServiceId = s.GetType().Name,
+        Description = s.Description ?? "No description available.",
+        Models = models
+      });
+    }
     return Results.Json(returnValue, jsonOptions);
   })
   .WithName("LLMServices")
   .DisableAntiforgery();
 
 
-
-
 app.MapGet("/ocr-services", async (HttpRequest request, IServiceProvider services) =>
   {
-    IStructuredDocumentService[] structuredDocumentServices =
-      services.GetServices<IStructuredDocumentService>().ToArray();
-    
+    IStructuredDocumentService[] structuredDocumentServices = services.GetServices<IStructuredDocumentService>().ToArray();
     var keyedServices = services.GetServices<IStructuredDocumentService>();
-    
     var returnValue = new List<GetOcrResponseItem>();
     returnValue.AddRange(
-      structuredDocumentServices.Select( s => new GetOcrResponseItem()
+      structuredDocumentServices.Select(s => new GetOcrResponseItem()
       {
-        Name = s.LLMName,
-        ServiceId = nameof(s),
-        Description = s.Description ?? "No description available.",
+        Name = s.LLMName, ServiceId = nameof(s), Description = s.Description ?? "No description available.",
       }).ToList());
-    
-
     return Results.Json(returnValue, jsonOptions);
   })
   .WithName("OCRServices")
@@ -163,12 +167,9 @@ app.Run();
 return;
 
 
-
-
-
 async Task<GenerateStructuredDocumentResponseImpl<T>> StructureDocumentHelper<T>(OcrRequest ocrRequest,
   IStructuredDocumentService structuredDocumentService,
-  IOcrResponseScoringService ocrResponseScoringService) 
+  IOcrResponseScoringService ocrResponseScoringService)
   where T : IStructuredDocumentParent, new()
 {
   var doc = await structuredDocumentService.OcrDocument<T>(ocrRequest);

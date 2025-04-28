@@ -1,16 +1,24 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Box,   Typography,  Button, FormControl, MenuItem, Select, SelectChangeEvent, InputLabel, Stack } from '@mui/material';
+﻿import React, {useState, useEffect} from 'react';
+import {
+    Box,
+    Typography,
+    Button,
+    FormControl,
+    MenuItem,
+    Select,
+    SelectChangeEvent,
+    InputLabel,
+    Stack
+} from '@mui/material';
 
 import UploadFile from '@mui/icons-material/UploadFile';
-import { useDropzone } from 'react-dropzone';
+import {useDropzone} from 'react-dropzone';
 import OcrResultDisplay from '../components/OcrResultDisplay';
 import QualityAssessmentDisplay from '../components/QualityAssessmentDisplay';
 import DocumentService, {OcrDocumentResponse, OCRService, LLMService, LLMModel} from '../services/DocumentService';
 
 
-
 const MainScreen: React.FC = () => {
-
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [documentType, setDocumentType] = useState<string>('');
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -23,8 +31,6 @@ const MainScreen: React.FC = () => {
     const [llmServices, setLlmServices] = useState<LLMService[]>([]);
     const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
 
-
-
     useEffect(() => {
         // Fetch OCR and LLM services when on mount
         const fetchServices = async () => {
@@ -33,23 +39,23 @@ const MainScreen: React.FC = () => {
                     DocumentService.getOCRServices(),
                     DocumentService.getLLMServices()
                 ]);
-                
+
                 setOcrServices(ocrServicesData);
                 setLlmServices(llmServicesData);
-                
+
                 // Set default values if available
                 if (ocrServicesData.length > 0) {
                     setOcrProvider(ocrServicesData[0].ServiceId);
                 }
-                
+
                 if (llmServicesData.length > 0) {
                     // Find the default model if it exists
                     const defaultService = llmServicesData[0];
                     setLlm(defaultService.ServiceId);
-                    
+
                     // Set available models for the selected LLM service
                     setLlmModels(defaultService.Models);
-                    
+
                     // Set default model if available
                     if (defaultService.Models && defaultService.Models.length > 0) {
                         // Try to find a default model first
@@ -66,10 +72,9 @@ const MainScreen: React.FC = () => {
                 console.error("Error fetching services:", error);
             }
         };
-        
         fetchServices();
     }, []);
-    
+
     const onDrop = (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         if (file) {
@@ -88,20 +93,20 @@ const MainScreen: React.FC = () => {
     const handleDocumentTypeChange = (event: SelectChangeEvent) => {
         setDocumentType(event.target.value);
     };
-    
+
     const handleOcrProviderChange = (event: SelectChangeEvent) => {
         setOcrProvider(event.target.value);
     };
-    
+
     const handleLlmChange = (event: SelectChangeEvent) => {
         const selectedLlmType = event.target.value;
         setLlm(selectedLlmType);
-        
+
         // Update models when LLM service changes
         const selectedService = llmServices.find(service => service.ServiceId === selectedLlmType);
         if (selectedService) {
             setLlmModels(selectedService.Models);
-            
+
             // Set default model if available
             if (selectedService.Models && selectedService.Models.length > 0) {
                 // Try to find a default model first
@@ -120,7 +125,7 @@ const MainScreen: React.FC = () => {
             setSelectedModel('');
         }
     };
-    
+
     const handleModelChange = (event: SelectChangeEvent) => {
         setSelectedModel(event.target.value);
     };
@@ -140,17 +145,13 @@ const MainScreen: React.FC = () => {
         }
     };
 
-    const { getRootProps, getInputProps } = useDropzone({
+    const {getRootProps, getInputProps} = useDropzone({
         onDrop,
-        accept: { 'image/*': [] },
+        accept: {'image/*': []},
         multiple: false,
     });
 
-
     // Assuming you have a file input, a document type selector, and an OCR button in your UI
-
-
-
     const handleOcrDocument = async () => {
 
         if (!documentType) {
@@ -173,12 +174,11 @@ const MainScreen: React.FC = () => {
         } catch (error) {
             setOcrResult(null);
             console.error("Failed to OCR document:", error);
-        }
-        finally {
+        } finally {
             setLoading(false);
         }
     };
-    
+
     return (
         <Box
             sx={{
@@ -187,11 +187,6 @@ const MainScreen: React.FC = () => {
                 overflow: 'hidden', // Prevent scrolling on the browser window
             }}
         >
-
-
-
-
-
             {/* Main content area */}
             <Box
                 component="main"
@@ -204,9 +199,6 @@ const MainScreen: React.FC = () => {
                     overflow: 'hidden', // Prevent content overflow
                 }}
             >
-
-
-
                 {/* First column: Image and text */}
                 <Box
                     sx={{
@@ -223,7 +215,6 @@ const MainScreen: React.FC = () => {
                         gap: '16px', // Add spacing between items
                     }}
                 >
-
                     <Box
                         {...getRootProps()}
                         sx={{
@@ -242,8 +233,8 @@ const MainScreen: React.FC = () => {
                         }}
                     >
                         <input {...getInputProps()} />
-                        <UploadFile sx={{ fontSize: '80px', color: '#ccc' }} />
-                        <Typography variant="body1" sx={{ alignSelf: 'flex-end' }}>
+                        <UploadFile sx={{fontSize: '80px', color: '#ccc'}}/>
+                        <Typography variant="body1" sx={{alignSelf: 'flex-end'}}>
                             Drop an image here
                         </Typography>
                     </Box>
@@ -260,7 +251,6 @@ const MainScreen: React.FC = () => {
                             }}
                         />
                     )}
-
                     {/* Button and Selector */}
                     <Box
                         sx={{
@@ -274,8 +264,7 @@ const MainScreen: React.FC = () => {
                         <Button variant="contained" color="primary" onClick={handleIdentifyDocument}>
                             Identify
                         </Button>
-
-                        <FormControl sx={{ flexGrow: 1, marginLeft: '16px' }}>
+                        <FormControl sx={{flexGrow: 1, marginLeft: '16px'}}>
                             <InputLabel id="document-type-label">Document Type</InputLabel>
                             <Select
                                 label="Document Type"
@@ -293,12 +282,8 @@ const MainScreen: React.FC = () => {
                             </Select>
                         </FormControl>
                     </Box>
-                    
-                    
-                    <Stack direction="row" spacing={2} sx={{ width: '100%', marginTop: '16px' }}>
-
-
-                        <FormControl sx={{ flexGrow: 1, marginLeft: '16px' }}>
+                    <Stack direction="row" spacing={2} sx={{width: '100%', marginTop: '16px'}}>
+                        <FormControl sx={{flexGrow: 1, marginLeft: '16px'}}>
                             <InputLabel id="ocr-provider-label">Ocr Provider</InputLabel>
                             <Select
                                 label="Ocr Provider"
@@ -316,7 +301,7 @@ const MainScreen: React.FC = () => {
                                 ))}
                             </Select>
                         </FormControl>
-                        <FormControl sx={{ flexGrow: 1, marginLeft: '16px' }}>
+                        <FormControl sx={{flexGrow: 1, marginLeft: '16px'}}>
                             <InputLabel id="llm-label">LLM</InputLabel>
                             <Select
                                 label="LLM"
@@ -334,11 +319,10 @@ const MainScreen: React.FC = () => {
                                 ))}
                             </Select>
                         </FormControl>
-                                            </Stack>
-                                            
-                                            {/* Model selector - only show when an LLM is selected */}
-                                            {llm && llmModels.length > 0 && (
-                        <FormControl sx={{ width: '100%' }}>
+                    </Stack>
+                    {/* Model selector - only show when an LLM is selected */}
+                    {llm && llmModels.length > 0 && (
+                        <FormControl sx={{width: '100%'}}>
                             <InputLabel id="model-label">Model</InputLabel>
                             <Select
                                 label="Model"
@@ -347,8 +331,8 @@ const MainScreen: React.FC = () => {
                                 onChange={handleModelChange}
                             >
                                 {llmModels.map((model) => (
-                                    <MenuItem 
-                                        key={model.Name} 
+                                    <MenuItem
+                                        key={model.Name}
                                         value={model.Name}
                                     >
                                         {model.Name} {model.IsDefault && '(Default)'}
@@ -356,7 +340,7 @@ const MainScreen: React.FC = () => {
                                 ))}
                             </Select>
                         </FormControl>
-                                            )}
+                    )}
                     <Button
                         variant="contained"
                         color="secondary"
@@ -370,9 +354,6 @@ const MainScreen: React.FC = () => {
                         OCR {documentType} {selectedModel ? `using ${selectedModel}` : ''}
                     </Button>
                 </Box>
-
-
-
                 {/* Third column: Placeholder */}
                 <Box
                     sx={{
@@ -386,9 +367,8 @@ const MainScreen: React.FC = () => {
                         padding: '16px', // Add padding to prevent cutting off
                     }}
                 >
-                    <OcrResultDisplay loading={loading} ocrResult={ocrResult} documentType={documentType} />
+                    <OcrResultDisplay loading={loading} ocrResult={ocrResult} documentType={documentType}/>
                 </Box>
-
                 <Box
                     sx={{
 
@@ -401,9 +381,9 @@ const MainScreen: React.FC = () => {
                         padding: '16px', // Add padding to prevent cutting off
                     }}
                 >
-                    <QualityAssessmentDisplay qualityAssessment={ocrResult?.QualityAssessment || null} />
+                    <QualityAssessmentDisplay qualityAssessment={ocrResult?.QualityAssessment || null}/>
                 </Box>
-                
+
             </Box>
         </Box>
     );
