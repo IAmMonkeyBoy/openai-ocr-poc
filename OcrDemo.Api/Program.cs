@@ -50,7 +50,7 @@ app.MapPost("/identify-document", async (  HttpRequest request, IDocumentIdentif
     }
 
     var file = request.Form.Files[0];
-    var identifyRequest = new DocumentRequest { FileName = file.FileName, FileContent = file.OpenReadStream() };
+    var identifyRequest = new DocumentRequest { FileName = file.FileName, FileContent = file.OpenReadStream() , Model = String.Empty};
 
     var response = await documentService.IdentifyDocument(identifyRequest);
     return Results.Json(response, jsonOptions); // Apply Pascal case serialization
@@ -79,19 +79,19 @@ app.MapPost("/ocr-document/{documentType}",
       var structuredDocumentServiceId = request.StructuredDocumentServiceId ?? nameof(OpenAiStructuredDocumentService);
       var documentService = services[structuredDocumentServiceId];
       var file = files.First();
-      var ocrRequest = new OcrRequest { FileName = file.FileName, FileContent = file.OpenReadStream() };
+      var ocrRequest = new OcrRequest { FileName = file.FileName, FileContent = file.OpenReadStream() , Model = request.Model};
       
       switch (documentType.ToLowerInvariant().Replace(" ", "").Replace("_", ""))
       {
         case "billoflading":
           return  
-            Results.Json(await StructureDocumentHelper<BillOfLading>(ocrRequest, documentService, ocrResponseScoringService));
+            Results.Json(await StructureDocumentHelper<BillOfLading>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
         case "invoice":
-          return Results.Json(await StructureDocumentHelper<Invoice>(ocrRequest, documentService, ocrResponseScoringService));
+          return Results.Json(await StructureDocumentHelper<Invoice>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
         case "rateconfirmation":
-          return Results.Json(await StructureDocumentHelper<RateConfirmation>(ocrRequest, documentService, ocrResponseScoringService));
+          return Results.Json(await StructureDocumentHelper<RateConfirmation>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
         case "fuelreceipt":
-          return Results.Json(await StructureDocumentHelper<FuelReceipt>(ocrRequest, documentService, ocrResponseScoringService));
+          return Results.Json(await StructureDocumentHelper<FuelReceipt>(ocrRequest, documentService, ocrResponseScoringService), jsonOptions);
       }
       return Results.BadRequest("Document type is not supported.");
     })

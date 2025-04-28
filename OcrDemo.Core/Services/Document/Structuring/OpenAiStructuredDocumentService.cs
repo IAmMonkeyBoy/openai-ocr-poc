@@ -32,17 +32,16 @@ public class OpenAiStructuredDocumentService(
                            Section 5.6 format.
                            """)
     };
-
     var responseSchema = typeof(T).ToJsonSchema();
     var options = new ChatCompletionOptions
     {
       ResponseFormat =
         ChatResponseFormat.CreateJsonSchemaFormat(nameof(T), BinaryData.FromString(responseSchema)),
       Temperature = 0.7F,
-      MaxOutputTokenCount = 1000
+      MaxOutputTokenCount = 1000,
     };
 
-    var result = await _openAiClient.GetChatClient("gpt-4o").CompleteChatAsync(messages, options);
+    var result = await _openAiClient.GetChatClient(request.Model).CompleteChatAsync(messages, options);
     var outputAsText = result.Value.Content.FirstOrDefault()?.Text ?? string.Empty;
     return JsonSerializer.Deserialize<T>(outputAsText, new JsonSerializerOptions() {NumberHandling = JsonNumberHandling.AllowReadingFromString});
   }
@@ -58,6 +57,36 @@ public class OpenAiStructuredDocumentService(
       Name = "gpt-4o",
       Description = "GPT-4o is a multimodal model that can process both text and images.",
       IsDefault = true
+    },
+    new LLMModel
+    {
+      Name = "gpt-4o-mini",
+      Description = "GPT-4o-mini is a smaller version of GPT-4o that is optimized for speed and efficiency."
+    },
+    new LLMModel
+    {
+      Name = "gpt-4o-nano",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "o4-mini",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "gpt-4.1",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "gpt-4.1-mini",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "gpt-4.1-nano",
+      Description = ""
     }
   });
  

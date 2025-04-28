@@ -5,7 +5,7 @@ export interface IdentifyDocumentResponse {
 }
 
 export interface OcrDocumentResponse {
- Document: string;
+ Document: object;
  QualityAssessment: QualityAssessment;
 }
 
@@ -63,12 +63,13 @@ class DocumentService {
         return await response.json() as Promise<IdentifyDocumentResponse>;
     }
 
-    static async ocrDocument(file: File, documentType: string, llmServiceId: string, ocrServiceId: string ): Promise<OcrDocumentResponse> {
+    static async ocrDocument(file: File, documentType: string, llmServiceId: string, ocrServiceId: string , model: string): Promise<OcrDocumentResponse> {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("documentType", documentType);
         formData.append("structuredDocumentServiceId", llmServiceId);
         formData.append("ocrServiceId", ocrServiceId);
+        formData.append("model", model)
 
         const response = await fetch(`${API_BASE_URL}ocr-document/${documentType}`, {
             method: "POST",

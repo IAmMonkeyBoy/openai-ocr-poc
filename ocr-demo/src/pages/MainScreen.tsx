@@ -167,7 +167,7 @@ const MainScreen: React.FC = () => {
         }
         try {
             setLoading(true);
-            const response = await DocumentService.ocrDocument(uploadedFile, documentType, llm, ocrProvider);
+            const response = await DocumentService.ocrDocument(uploadedFile, documentType, llm, ocrProvider, selectedModel);
             setOcrResult(response);
             console.log("OCR Response:", response);
         } catch (error) {

@@ -88,6 +88,36 @@ public class MEAIStructuredDocumentServiceBase(
       Name = "gpt-4o",
       Description = "GPT-4o is a multimodal model that can process both text and images.",
       IsDefault = true
+    },
+    new LLMModel
+    {
+      Name = "gpt-4o-mini",
+      Description = "GPT-4o-mini is a smaller version of GPT-4o that is optimized for speed and efficiency."
+    },
+    new LLMModel
+    {
+      Name = "gpt-4o-nano",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "o4-mini",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "gpt-4.1",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "gpt-4.1-mini",
+      Description = ""
+    },
+    new LLMModel
+    {
+      Name = "gpt-4.1-nano",
+      Description = ""
     }
   });
 
