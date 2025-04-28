@@ -20,8 +20,8 @@ public static class ComponentRegistration
           nameof(OpenAiStructuredDocumentService));
         services.AddKeyedSingleton<IStructuredDocumentService, OllamaStructuredDocumentService>(
           nameof(OllamaStructuredDocumentService));
-        services.AddKeyedSingleton<IStructuredDocumentService, MEAIStructuredDocumentServiceBase>(
-          nameof(MEAIStructuredDocumentServiceBase));
+        services.AddKeyedSingleton<IStructuredDocumentService, MEAIOpenAIStructuredDocumentService>(
+          nameof(MEAIOpenAIStructuredDocumentService));
         services.AddKeyedSingleton<IOcrService, TesseractOcrService>(OcrProvider.Tesseract);
         services.AddKeyedSingleton<IOcrService, IronOcrService>(OcrProvider.Iron);
         services.AddKeyedSingleton<IOcrService, OpenAiOcrService>(OcrProvider.OpenAi);

@@ -69,7 +69,7 @@ app.MapPost("/ocr-document/{documentType}",
       IStructuredDocumentService openAiService,
       [FromKeyedServices(nameof(OllamaStructuredDocumentService))]
       IStructuredDocumentService ollamaService,
-      [FromKeyedServices(nameof(MEAIStructuredDocumentServiceBase))]
+      [FromKeyedServices(nameof(MEAIOpenAIStructuredDocumentService))]
       IStructuredDocumentService meaiService,
       IOcrResponseScoringService ocrResponseScoringService) =>
     {
@@ -77,7 +77,7 @@ app.MapPost("/ocr-document/{documentType}",
       {
         { nameof(OpenAiStructuredDocumentService), openAiService },
         { nameof(OllamaStructuredDocumentService), ollamaService },
-        { nameof(MEAIStructuredDocumentServiceBase), meaiService }
+        { nameof(MEAIOpenAIStructuredDocumentService), meaiService }
       };
       var structuredDocumentServiceId = request.StructuredDocumentServiceId ?? nameof(OpenAiStructuredDocumentService);
       var documentService = services[structuredDocumentServiceId];
@@ -118,7 +118,7 @@ app.MapGet("/llm-services", async (
     IStructuredDocumentService oaiService,
     [FromKeyedServices(nameof(OllamaStructuredDocumentService))]
     IStructuredDocumentService ollamaService,
-    [FromKeyedServices(nameof(MEAIStructuredDocumentServiceBase))]
+    [FromKeyedServices(nameof(MEAIOpenAIStructuredDocumentService))]
     IStructuredDocumentService meaiService) =>
   {
     var structuredDocumentServices = new[] { oaiService, ollamaService, meaiService };

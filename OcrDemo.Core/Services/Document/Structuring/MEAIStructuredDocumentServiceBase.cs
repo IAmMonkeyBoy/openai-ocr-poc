@@ -8,12 +8,12 @@ using OcrDemo.Core.Utils.Json;
 
 namespace OcrDemo.Core.Services.Document.Structuring;
 
-public class MEAIStructuredDocumentServiceBase(
-  ILogger<MEAIStructuredDocumentServiceBase> logger,
+public class MEAIOpenAIStructuredDocumentService(
+  ILogger<MEAIOpenAIStructuredDocumentService> logger,
   IChatClient chatClient)
   : IStructuredDocumentService
 {
-  private readonly ILogger<MEAIStructuredDocumentServiceBase> _logger =
+  private readonly ILogger<MEAIOpenAIStructuredDocumentService> _logger =
     logger ?? throw new ArgumentNullException(nameof(logger));
 
   private readonly IChatClient _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
@@ -79,8 +79,8 @@ public class MEAIStructuredDocumentServiceBase(
     return response.Result;
   }
 
-  public string LLMName { get; set; } = "Microsoft.Extensions.AI";
-  public string Description { get; set; } = "MEAIStructuredDocumentServiceBase is a base class for structured document services using Microsoft.Extensions.AI.";
+  public string LLMName { get; set; } = "MEAI OpenAI Structured Document Service";
+  public string Description { get; set; } = "MEAIOpenAIStructuredDocumentService is a base class for structured document services using Microsoft.Extensions.AI.";
   public Task<List<LLMModel>> GetModels() => Task.FromResult(new List<LLMModel>
   {
     new LLMModel
