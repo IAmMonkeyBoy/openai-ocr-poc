@@ -5,8 +5,8 @@ export interface IdentifyDocumentResponse {
 }
 
 export interface OcrDocumentResponse {
- Document: string;
-
+ Document: object;
+ QualityAssessment: QualityAssessment;
 }
 
 export interface QualityAssessment{
@@ -21,6 +21,29 @@ export interface FieldEvaluation
     Value: string;
 }
 
+
+export interface LLMService 
+{
+    Name: string;
+    Description: string;
+    ServiceId: string;
+    Models: LLMModel[];
+}
+export interface LLMModel
+{
+    Name: string;
+    Description: string;
+    ModelType: string;
+    IsDefault: boolean;
+}
+
+export interface OCRService 
+{
+    Name: string;
+    Description: string;
+    ServiceId: string;
+
+}
 const API_BASE_URL = "http://localhost:5194/";
 
 class DocumentService {
@@ -40,9 +63,13 @@ class DocumentService {
         return await response.json() as Promise<IdentifyDocumentResponse>;
     }
 
-    static async ocrDocument(file: File, documentType: string): Promise<OcrDocumentResponse> {
+    static async ocrDocument(file: File, documentType: string, llmServiceId: string, ocrServiceId: string , model: string): Promise<OcrDocumentResponse> {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("documentType", documentType);
+        formData.append("structuredDocumentServiceId", llmServiceId);
+        formData.append("ocrServiceId", ocrServiceId);
+        formData.append("model", model)
 
         const response = await fetch(`${API_BASE_URL}ocr-document/${documentType}`, {
             method: "POST",
@@ -54,6 +81,27 @@ class DocumentService {
         }
 
         return await response.json() as Promise<OcrDocumentResponse>;
+    }
+    
+    
+    static async getLLMServices(): Promise<LLMService[]> {
+        const response = await fetch(`${API_BASE_URL}llm-services`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch LLM services.");
+        }
+
+        return await response.json() as Promise<LLMService[]>;
+    }
+    
+    static async getOCRServices(): Promise<OCRService[]> {
+        const response = await fetch(`${API_BASE_URL}ocr-services`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch OCR services.");
+        }
+
+        return await response.json() as Promise<OCRService[]>;
     }
 }
 
