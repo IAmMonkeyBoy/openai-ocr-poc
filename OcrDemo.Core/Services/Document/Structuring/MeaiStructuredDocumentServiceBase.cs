@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OcrDemo.Core.Requests;
 using OcrDemo.Core.Utils;
@@ -8,17 +7,16 @@ using OcrDemo.Core.Utils.Json;
 
 namespace OcrDemo.Core.Services.Document.Structuring;
 
-public class MEAIOpenAIStructuredDocumentService(
-  ILogger<MEAIOpenAIStructuredDocumentService> logger,
-  IChatClient chatClient)
-  : IStructuredDocumentService
+public abstract class MeaiStructuredDocumentServiceBase(
+  ILogger<MeaiStructuredDocumentServiceBase> logger,
+  IChatClient chatClient) : IStructuredDocumentService
 {
-  private readonly ILogger<MEAIOpenAIStructuredDocumentService> _logger =
+  private readonly ILogger<MeaiStructuredDocumentServiceBase> _logger =
     logger ?? throw new ArgumentNullException(nameof(logger));
 
   private readonly IChatClient _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
 
-  public async Task<T?> OcrDocument<T>(OcrRequest request)
+  public virtual async Task<T?> OcrDocument<T>(OcrRequest request)
   {
     var bytes = request.FileContent.ToByteArray();
     var inferredImageType = bytes.InferImageTypeFromBytes();
@@ -79,46 +77,9 @@ public class MEAIOpenAIStructuredDocumentService(
     return response.Result;
   }
 
-  public string LLMName { get; set; } = "MEAI OpenAI Structured Document Service";
-  public string Description { get; set; } = "MEAIOpenAIStructuredDocumentService is a base class for structured document services using Microsoft.Extensions.AI.";
-  public Task<List<LLMModel>> GetModels() => Task.FromResult(new List<LLMModel>
-  {
-    new LLMModel
-    {
-      Name = "gpt-4o",
-      Description = "GPT-4o is a multimodal model that can process both text and images.",
-      IsDefault = true
-    },
-    new LLMModel
-    {
-      Name = "gpt-4o-mini",
-      Description = "GPT-4o-mini is a smaller version of GPT-4o that is optimized for speed and efficiency."
-    },
-    new LLMModel
-    {
-      Name = "gpt-4o-nano",
-      Description = ""
-    },
-    new LLMModel
-    {
-      Name = "o4-mini",
-      Description = ""
-    },
-    new LLMModel
-    {
-      Name = "gpt-4.1",
-      Description = ""
-    },
-    new LLMModel
-    {
-      Name = "gpt-4.1-mini",
-      Description = ""
-    },
-    new LLMModel
-    {
-      Name = "gpt-4.1-nano",
-      Description = ""
-    }
-  });
+  public abstract string LLMName { get; set; }
+  public abstract string Description { get; set; }
+  public abstract Task<List<LLMModel>> GetModels();
+
 
 }

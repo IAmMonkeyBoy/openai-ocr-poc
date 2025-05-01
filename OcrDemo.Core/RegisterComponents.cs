@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Anthropic;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,15 +14,20 @@ namespace OcrDemo.Core;
 
 public static class ComponentRegistration
 {
-    public static IServiceCollection RegisterOcrDemoServices(this IServiceCollection services, string? openAiApiKey)
+    public static IServiceCollection RegisterOcrDemoServices(this IServiceCollection services, string openAiApiKey, string anthropicApiKey)
     {
         services.AddSingleton<OpenAIClient>(x => new OpenAIClient(openAiApiKey));
+        services.AddSingleton<AnthropicClient>(x => new AnthropicClient(anthropicApiKey));
         services.AddKeyedSingleton<IStructuredDocumentService, OpenAiStructuredDocumentService>(
           nameof(OpenAiStructuredDocumentService));
         services.AddKeyedSingleton<IStructuredDocumentService, OllamaStructuredDocumentService>(
           nameof(OllamaStructuredDocumentService));
-        services.AddKeyedSingleton<IStructuredDocumentService, MEAIOpenAIStructuredDocumentService>(
-          nameof(MEAIOpenAIStructuredDocumentService));
+        services.AddKeyedSingleton<IStructuredDocumentService, MeaiOpenAiStructuredDocumentService>(
+          nameof(MeaiOpenAiStructuredDocumentService));
+        services.AddKeyedSingleton<IStructuredDocumentService, MeaiAnthropicStructuredDocumentService>(
+          nameof(MeaiAnthropicStructuredDocumentService));
+        services.AddKeyedSingleton<IStructuredDocumentService, AnthropicStructuredDocumentService>(
+          nameof(AnthropicStructuredDocumentService));
         services.AddKeyedSingleton<IOcrService, TesseractOcrService>(OcrProvider.Tesseract);
         services.AddKeyedSingleton<IOcrService, IronOcrService>(OcrProvider.Iron);
         services.AddKeyedSingleton<IOcrService, OpenAiOcrService>(OcrProvider.OpenAi);

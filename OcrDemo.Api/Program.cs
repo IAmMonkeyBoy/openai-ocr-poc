@@ -11,6 +11,7 @@ using OcrDemo.Core.Services.Document.Structuring;
 
 var builder = WebApplication.CreateBuilder(args);
 var openAiApiKey = builder.Configuration["OpenAIServiceOptions:ApiKey"];
+var anthropicApiKey = builder.Configuration["AnthropicServiceOptions:ApiKey"];
 
 // Add services to the container.
 builder.Services.AddAuthorization();
@@ -23,7 +24,7 @@ builder.Services.AddCors(options =>
       .AllowAnyMethod();
   });
 });
-builder.Services.RegisterOcrDemoServices(openAiApiKey);
+builder.Services.RegisterOcrDemoServices(openAiApiKey, anthropicApiKey);
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -69,15 +70,21 @@ app.MapPost("/ocr-document/{documentType}",
       IStructuredDocumentService openAiService,
       [FromKeyedServices(nameof(OllamaStructuredDocumentService))]
       IStructuredDocumentService ollamaService,
-      [FromKeyedServices(nameof(MEAIOpenAIStructuredDocumentService))]
+      [FromKeyedServices(nameof(MeaiOpenAiStructuredDocumentService))]
       IStructuredDocumentService meaiService,
+      [FromKeyedServices(nameof(MeaiAnthropicStructuredDocumentService))]
+      IStructuredDocumentService meaiAnthropicService,
+      [FromKeyedServices(nameof(AnthropicStructuredDocumentService))]
+      IStructuredDocumentService anthropicService,
       IOcrResponseScoringService ocrResponseScoringService) =>
     {
       Dictionary<string, IStructuredDocumentService> services = new Dictionary<string, IStructuredDocumentService>()
       {
         { nameof(OpenAiStructuredDocumentService), openAiService },
         { nameof(OllamaStructuredDocumentService), ollamaService },
-        { nameof(MEAIOpenAIStructuredDocumentService), meaiService }
+        { nameof(MeaiOpenAiStructuredDocumentService), meaiService },
+        { nameof(MeaiAnthropicStructuredDocumentService), meaiAnthropicService },
+        { nameof(AnthropicStructuredDocumentService), anthropicService }
       };
       var structuredDocumentServiceId = request.StructuredDocumentServiceId ?? nameof(OpenAiStructuredDocumentService);
       var documentService = services[structuredDocumentServiceId];
@@ -118,10 +125,16 @@ app.MapGet("/llm-services", async (
     IStructuredDocumentService oaiService,
     [FromKeyedServices(nameof(OllamaStructuredDocumentService))]
     IStructuredDocumentService ollamaService,
-    [FromKeyedServices(nameof(MEAIOpenAIStructuredDocumentService))]
-    IStructuredDocumentService meaiService) =>
+    [FromKeyedServices(nameof(MeaiOpenAiStructuredDocumentService))]
+    IStructuredDocumentService meaiService,
+    [FromKeyedServices(nameof(MeaiAnthropicStructuredDocumentService))]
+    IStructuredDocumentService meaiAnthropicService,
+    [FromKeyedServices(nameof(AnthropicStructuredDocumentService))]
+    IStructuredDocumentService anthropicService
+
+    ) =>
   {
-    var structuredDocumentServices = new[] { oaiService, ollamaService, meaiService };
+    var structuredDocumentServices = new[] { oaiService, ollamaService, meaiService, meaiAnthropicService, anthropicService };
     var returnValue = new List<GetLLMResponseItem>();
     foreach (var s in structuredDocumentServices)
     {
