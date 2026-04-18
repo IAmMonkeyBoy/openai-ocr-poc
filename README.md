@@ -16,7 +16,7 @@ Recognition (OCR) for processing various document types, such as invoices, fuel 
 ## Technologies Used
 
 - **Frontend**: React with Material-UI for the user interface.
-- **Backend**: C# with .NET for processing and business logic.
+- **Backend**: C# with .NET 10 for processing and business logic.
 - **OCR**: Integration with OCR libraries or APIs for text extraction.
 - **Data Models**: Strongly-typed C# models for structured data representation.
 
@@ -26,4 +26,3 @@ Recognition (OCR) for processing various document types, such as invoices, fuel 
 2. Select the document type from the dropdown menu or Click the Identify button to classify the document.
 3. Click the OCR Document button to extract text and structured data.
 4. View the extracted data in the results display area.
-
